@@ -30,7 +30,7 @@ export default function RPGWordGame() {
   };
 
   const handleAnswer = (choice) => {
-    if (choice === current.word) {
+    if (choice === current.answer) {
       const newExp = exp + 10;
       const newLevel = Math.floor(newExp / 50) + 1;
       setExp(newExp);
