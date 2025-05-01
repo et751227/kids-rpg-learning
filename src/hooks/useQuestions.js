@@ -5,7 +5,7 @@ export function useQuestions() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("https://script.google.com/macros/s/YOUR-SCRIPT-ID/exec")
+    fetch("https://script.google.com/macros/s/AKfycbwjSr6rDRrqo5xq1ztDsRVDORoBWLGZwwtHSSHKkYLUykjNdao9Va-YN3eg02HTWYMh/exec")
       .then((res) => res.json())
       .then((data) => {
         const formatted = data.map((item) => ({
