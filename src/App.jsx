@@ -62,7 +62,7 @@ export default function RPGWordGame() {
             🔊 點我聽發音
           </button>
           <div className="grid grid-cols-2 gap-3">
-            {current.choices?.map((c) => (
+            {current.options?.map((c) => (
               <button
                 key={c}
                 onClick={() => handleAnswer(c)}
