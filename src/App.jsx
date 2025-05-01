@@ -1,25 +1,23 @@
 import { useState, useEffect } from "react";
-
-const wordList = [
-  { word: "apple", choices: ["apple", "banana", "cat", "dog"] },
-  { word: "sun", choices: ["moon", "star", "sun", "cloud"] },
-  { word: "dog", choices: ["fish", "dog", "bird", "tree"] },
-  { word: "car", choices: ["bus", "car", "bike", "train"] },
-  { word: "book", choices: ["book", "pen", "bag", "table"] }
-];
+import { useQuestions } from "./hooks/useQuestions";
 
 export default function RPGWordGame() {
+  const { questions, loading } = useQuestions();
   const [index, setIndex] = useState(0);
   const [exp, setExp] = useState(() => parseInt(localStorage.getItem("exp")) || 0);
   const [level, setLevel] = useState(() => parseInt(localStorage.getItem("level")) || 1);
   const [feedback, setFeedback] = useState("");
 
-  const current = wordList[index];
-
   useEffect(() => {
     localStorage.setItem("exp", exp);
     localStorage.setItem("level", level);
   }, [exp, level]);
+
+  if (loading) {
+    return <div className="p-10 text-3xl text-center animate-bounce">🔄 載入題庫中...</div>;
+  }
+
+  const current = questions[index];
 
   const speak = (text) => {
     const msg = new SpeechSynthesisUtterance(text);
@@ -33,40 +31,42 @@ export default function RPGWordGame() {
       const newLevel = Math.floor(newExp / 50) + 1;
       setExp(newExp);
       setLevel(newLevel);
-      setFeedback("✅ Correct!");
+      setFeedback("🎉 太棒了！");
     } else {
-      setFeedback("❌ Try again!");
+      setFeedback("😢 再試一次！");
     }
     setTimeout(() => {
       setFeedback("");
-      setIndex((prev) => (prev + 1) % wordList.length);
-    }, 1000);
+      setIndex((prev) => (prev + 1) % questions.length);
+    }, 1200);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-100 to-green-100 flex flex-col items-center justify-center p-4">
-      <div className="text-2xl font-bold mb-4">🌟 RPG 單字冒險</div>
-      <div className="mb-2">角色等級：{level} / 經驗值：{exp}</div>
-      <div className="p-4 bg-white rounded-2xl shadow-xl text-center w-full max-w-md">
-        <div className="text-xl font-semibold mb-2">單字：{current.word}</div>
+    <div className="min-h-screen bg-gradient-to-br from-pink-100 to-yellow-100 flex flex-col items-center justify-center p-4">
+      <div className="text-3xl font-bold mb-4 text-purple-800">🌟 RPG 單字冒險</div>
+      <div className="mb-4 text-lg text-gray-700 bg-white rounded-xl px-4 py-2 shadow">
+        🧙‍♂️ 角色等級：{level} ｜✨ 經驗值：{exp}
+      </div>
+      <div className="p-6 bg-white rounded-3xl shadow-2xl text-center w-full max-w-md">
+        <div className="text-2xl font-bold mb-3 text-blue-600">單字：{current.word}</div>
         <button
           onClick={() => speak(current.word)}
-          className="mb-4 px-4 py-2 bg-blue-500 text-white rounded-xl"
+          className="mb-5 px-5 py-2 bg-blue-400 text-white rounded-full hover:bg-blue-500"
         >
-          🔊 聽發音
+          🔊 點我聽發音
         </button>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-3">
           {current.choices.map((c) => (
             <button
               key={c}
               onClick={() => handleAnswer(c)}
-              className="p-2 bg-yellow-200 rounded-xl hover:bg-yellow-300"
+              className="py-3 bg-yellow-300 rounded-2xl hover:bg-yellow-400 text-xl font-semibold"
             >
               {c}
             </button>
           ))}
         </div>
-        {feedback && <div className="mt-4 text-xl">{feedback}</div>}
+        {feedback && <div className="mt-5 text-2xl">{feedback}</div>}
       </div>
     </div>
   );
