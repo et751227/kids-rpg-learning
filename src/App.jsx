@@ -57,7 +57,7 @@ export default function RPGWordGame() {
       <img
         src="/images/hero.png"
         alt="小魔法師"
-        className="w-32 h-32 mb-4 animate-bounce"
+        className="w-36 h-36 mb-4 rounded-full ring-4 ring-purple-400 shadow-xl bg-white bg-opacity-90 p-1"
       />
 
       <div className="text-2xl bg-white text-gray-800 px-6 py-3 rounded-full shadow-lg mb-6 font-semibold flex gap-6 items-center">
