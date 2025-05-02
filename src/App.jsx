@@ -46,17 +46,26 @@ export default function RPGWordGame() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-200 to-yellow-100 flex flex-col items-center justify-center p-6 font-sans">
+    <div
+      className="min-h-screen bg-cover bg-center flex flex-col items-center justify-center p-6 font-sans"
+      style={{ backgroundImage: "url('/images/bg-magic.jpg')" }}
+    >
       <div className="text-5xl font-extrabold text-purple-700 mb-4 animate-pulse tracking-wider">
         🌟 RPG 單字冒險
       </div>
+
+      <img
+        src="/images/hero.png"
+        alt="小魔法師"
+        className="w-32 h-32 mb-4 animate-bounce"
+      />
 
       <div className="text-2xl bg-white text-gray-800 px-6 py-3 rounded-full shadow-lg mb-6 font-semibold flex gap-6 items-center">
         🧙‍♀️ 等級：<span className="text-blue-600">{level}</span> ｜✨ 經驗值：<span className="text-yellow-600">{exp}</span>
       </div>
 
       {current.word ? (
-        <div className="w-full max-w-xl bg-white rounded-3xl shadow-2xl p-8 text-center">
+        <div className="w-full max-w-xl bg-white bg-opacity-90 rounded-3xl shadow-2xl p-8 text-center">
           <div className="text-3xl font-bold text-blue-700 mb-4">單字：{current.word}</div>
 
           <button
