@@ -85,10 +85,10 @@ export default function RPGWordGameMain() {
 
   return (
     <div
-      className="min-h-screen bg-cover bg-center flex flex-col items-center justify-center p-6 font-sans"
+      className="min-h-screen bg-cover bg-center flex flex-col items-center justify-center p-4 font-sans text-shadow"
       style={{ backgroundImage: "url('/images/bg-magic.jpg')" }}
     >
-      <div className="text-5xl font-extrabold text-purple-700 mb-4 animate-pulse tracking-wider">
+      <div className="text-5xl font-extrabold text-purple-700 mb-4 animate-pulse tracking-wider drop-shadow-md">
         🌟 RPG 單字冒險
       </div>
 
@@ -116,17 +116,17 @@ export default function RPGWordGameMain() {
         </div>
       </div>
 
-      <div className="text-lg text-gray-600 italic mb-2">題型：{question.direction}</div>
-      <div className="text-2xl font-bold text-blue-700 mb-2">請拼出：「{question.questionText}」</div>
+      <div className="text-base text-gray-700 italic mb-1">題型：{question.direction}</div>
+      <div className="text-3xl font-bold text-blue-800 mb-3">請拼出：「{question.questionText}」</div>
 
       <button
         onClick={() => speak(question.questionText)}
-        className="mb-4 px-5 py-2 bg-blue-500 text-white text-lg rounded-full shadow hover:bg-blue-600 transition"
+        className="mb-5 px-6 py-2 bg-blue-500 text-white text-lg rounded-full shadow hover:bg-blue-600 transition"
       >
         🔊 點我聽發音
       </button>
 
-      <div className="min-h-[48px] mb-4 text-3xl tracking-widest font-mono text-center text-gray-800 bg-white px-6 py-2 rounded-full shadow">
+      <div className="min-h-[48px] mb-4 text-3xl tracking-widest font-mono text-center text-gray-900 bg-white px-6 py-2 rounded-full shadow-inner border border-gray-300">
         {input.join("") || "⋯"}
       </div>
 
@@ -149,7 +149,7 @@ export default function RPGWordGameMain() {
       {renderAlphabetButtons()}
 
       {feedback && (
-        <div className="mt-6 text-2xl font-bold text-center animate-bounce">
+        <div className="mt-6 text-2xl font-bold text-center text-white bg-black bg-opacity-50 px-4 py-2 rounded-xl animate-bounce">
           {feedback}
         </div>
       )}
