@@ -65,12 +65,12 @@ export default function RPGWordGameMain() {
   const renderAlphabetButtons = () => {
     const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
     return (
-      <div className="grid grid-cols-7 gap-2 max-w-md mx-auto mb-4">
+      <div className="grid grid-cols-7 gap-3 max-w-md mx-auto mb-4 px-4">
         {alphabet.map((char) => (
           <button
             key={char}
             onClick={() => handleLetterClick(char)}
-            className="bg-yellow-300 hover:bg-yellow-400 text-xl font-bold py-2 rounded-lg shadow"
+            className="bg-yellow-300 hover:bg-yellow-400 text-xl font-bold py-3 rounded-xl shadow transition-transform active:scale-95"
           >
             {char}
           </button>
@@ -116,8 +116,13 @@ export default function RPGWordGameMain() {
         </div>
       </div>
 
-      <div className="text-base text-gray-700 italic mb-1">題型：{question.direction}</div>
-      <div className="text-3xl font-bold text-blue-800 mb-3">請拼出：「{question.questionText}」</div>
+      <div className="text-lg text-gray-800 font-medium italic mb-1 bg-white bg-opacity-70 px-4 py-1 rounded shadow">
+        題型：{question.direction}
+      </div>
+
+      <div className="text-4xl font-extrabold text-blue-900 mb-3 drop-shadow-sm bg-white bg-opacity-70 px-6 py-3 rounded-2xl">
+        請拼出：「{question.questionText}」
+      </div>
 
       <button
         onClick={() => speak(question.questionText)}
@@ -126,7 +131,7 @@ export default function RPGWordGameMain() {
         🔊 點我聽發音
       </button>
 
-      <div className="min-h-[48px] mb-4 text-3xl tracking-widest font-mono text-center text-gray-900 bg-white px-6 py-2 rounded-full shadow-inner border border-gray-300">
+      <div className="min-h-[48px] mb-4 text-3xl tracking-widest font-mono text-center text-gray-900 bg-white px-6 py-2 rounded-full shadow-inner border border-gray-300 w-full max-w-xs">
         {input.join("") || "⋯"}
       </div>
 
@@ -149,7 +154,7 @@ export default function RPGWordGameMain() {
       {renderAlphabetButtons()}
 
       {feedback && (
-        <div className="mt-6 text-2xl font-bold text-center text-white bg-black bg-opacity-50 px-4 py-2 rounded-xl animate-bounce">
+        <div className="mt-6 text-2xl font-bold text-center text-white bg-black bg-opacity-60 px-6 py-3 rounded-xl animate-bounce max-w-md">
           {feedback}
         </div>
       )}
