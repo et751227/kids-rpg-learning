@@ -1,10 +1,17 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import './index.css'; // ✅ 加這一行來載入 Tailwind 樣式
-import RPGWordGame from './App';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import './index.css'; // Tailwind 樣式
+import PracticeMode from './PracticeMode';
+import ChallengeMode from './ChallengeMode';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <RPGWordGame />
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<PracticeMode />} />
+        <Route path="/challenge" element={<ChallengeMode />} />
+      </Routes>
+    </BrowserRouter>
   </React.StrictMode>
 );
