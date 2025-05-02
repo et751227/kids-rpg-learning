@@ -71,20 +71,20 @@ export default function RPGWordGame() {
         className="w-36 h-36 mb-4 rounded-full ring-4 ring-purple-400 shadow-xl bg-white bg-opacity-90 p-1"
       />
 
-      {/* 狀態列：等級、經驗值、血條 */}
+      {/* 狀態列：等級、經驗值、血量 */}
       <div className="bg-white bg-opacity-90 px-6 py-4 rounded-2xl shadow-lg mb-6 w-full max-w-xs flex flex-col items-center gap-3">
-        <div className="text-xl font-semibold text-gray-800 flex gap-4">
-          🧙‍♀️ 等級：<span className="text-blue-600">{level}</span>
-          ｜✨ 經驗值：<span className="text-yellow-600">{exp}</span>
+        <div className="flex gap-4 text-xl font-semibold text-gray-800">
+          <div className="whitespace-nowrap">🧙‍♀️ 等級：<span className="text-blue-600">{level}</span></div>
+          <div className="whitespace-nowrap">✨ 經驗值：<span className="text-yellow-600">{exp}</span></div>
         </div>
-
+      
         <div className="w-full bg-red-200 rounded-full h-4 shadow-inner overflow-hidden">
           <div
             className="bg-red-500 h-full transition-all duration-500"
             style={{ width: `${(hp / maxHp) * 100}%` }}
           ></div>
         </div>
-
+      
         <div className="inline-block px-3 py-1 bg-white bg-opacity-80 rounded-full shadow text-red-700 font-bold text-sm tracking-wide border border-red-300">
           ❤️ 血量：{hp} / {maxHp}
         </div>
