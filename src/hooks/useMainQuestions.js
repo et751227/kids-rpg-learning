@@ -14,7 +14,6 @@ import { useState, useEffect } from "react";
          }));
  
          const random = raw[Math.floor(Math.random() * raw.length)];
-         const isChineseQuestion = Math.random() < 0.5;
          const isChineseQuestion = true; // 永遠是中文題
  
          const questionText = isChineseQuestion ? random.chinese : random.english;
