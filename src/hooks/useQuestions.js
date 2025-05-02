@@ -10,7 +10,7 @@ export function useQuestions() {
       .then((data) => {
         const formatted = data.map((item) => ({
           word: item.word,
-          choices: [item.option1, item.option2, item.option3, item.option4],
+          options: [item.option1, item.option2, item.option3, item.option4],
           answer: item.answer,
         }));
         setQuestions(formatted);
