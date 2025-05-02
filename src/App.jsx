@@ -82,8 +82,10 @@ export default function RPGWordGame() {
           style={{ width: `${(hp / maxHp) * 100}%` }}
         ></div>
       </div>
-      <div className="text-sm font-bold text-red-700 mb-6">
-        ❤️ 血量：{hp} / {maxHp}
+      <div className="mb-6 text-center">
+        <div className="inline-block px-3 py-1 bg-white bg-opacity-80 rounded-full shadow text-red-700 font-bold text-lg tracking-wide border border-red-300">
+          ❤️ 血量：{hp} / {maxHp}
+        </div>
       </div>
 
       {current.word ? (
