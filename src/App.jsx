@@ -46,10 +46,12 @@ export default function RPGWordGame() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-100 to-yellow-100 flex flex-col items-center justify-center p-4">
-      <div className="text-3xl font-bold mb-4 text-purple-800 animate-pulse">🌟 RPG 單字冒險</div>
-      <div className="mb-4 text-lg text-gray-700 bg-white rounded-xl px-4 py-2 shadow">
-        🧙‍♂️ 角色等級：{level} ｜✨ 經驗值：{exp}
+    <div className="min-h-screen bg-gradient-to-br from-pink-100 to-yellow-100 flex flex-col items-center justify-center p-4 font-sans">
+      <div className="text-4xl font-extrabold mb-4 text-purple-700 animate-pulse tracking-wider">
+        🌟 RPG 單字冒險
+      </div>
+      <div className="mb-4 text-lg text-gray-800 bg-white rounded-full px-6 py-2 shadow-lg font-semibold tracking-wide">
+        🧙‍♂️ 等級：{level} ｜✨ 經驗值：{exp}
       </div>
 
       {current.word ? (
@@ -57,22 +59,36 @@ export default function RPGWordGame() {
           <div className="text-2xl font-bold mb-3 text-blue-600">單字：{current.word}</div>
           <button
             onClick={() => speak(current.word)}
-            className="mb-5 px-5 py-2 bg-blue-400 text-white rounded-full hover:bg-blue-500"
+            className="mb-5 px-5 py-2 bg-blue-400 text-white rounded-full hover:bg-blue-500 transition-transform active:scale-95"
           >
             🔊 點我聽發音
           </button>
+
           <div className="grid grid-cols-2 gap-3">
             {current.options?.map((c) => (
               <button
                 key={c}
                 onClick={() => handleAnswer(c)}
-                className="py-3 bg-yellow-300 rounded-2xl hover:bg-yellow-400 text-xl font-semibold"
+                className={`py-4 rounded-2xl text-xl font-semibold transition-transform duration-200
+                  ${feedback
+                    ? "pointer-events-none opacity-50"
+                    : "bg-yellow-300 hover:bg-yellow-400 active:scale-95 shadow-md"}
+                `}
               >
-                {c}
+                🎁 {c}
               </button>
             ))}
           </div>
-          {feedback && <div className="mt-5 text-2xl">{feedback}</div>}
+
+          {feedback && (
+            <div
+              className={`mt-6 text-3xl font-bold transition-opacity duration-500 animate-bounce
+                ${feedback.includes("太棒了") ? "text-green-600" : "text-red-500"}
+              `}
+            >
+              {feedback}
+            </div>
+          )}
         </div>
       ) : (
         <div className="text-xl text-red-600 mt-10">⚠️ 無法顯示題目，請稍後再試</div>
