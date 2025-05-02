@@ -6,6 +6,8 @@ export default function RPGWordGame() {
   const [index, setIndex] = useState(0);
   const [exp, setExp] = useState(() => parseInt(localStorage.getItem("exp")) || 0);
   const [level, setLevel] = useState(() => parseInt(localStorage.getItem("level")) || 1);
+  const [maxHp, setMaxHp] = useState(50);
+  const [hp, setHp] = useState(50);
   const [feedback, setFeedback] = useState("");
 
   useEffect(() => {
@@ -33,12 +35,21 @@ export default function RPGWordGame() {
     if (choice === current.answer) {
       const newExp = exp + 10;
       const newLevel = Math.floor(newExp / 50) + 1;
+
+      if (newLevel > level) {
+        const nextMaxHp = 50 + (newLevel - 1) * 10; // 每升級加10滴血
+        setMaxHp(nextMaxHp);
+        setHp(nextMaxHp); // 回滿血
+      }
+
       setExp(newExp);
       setLevel(newLevel);
       setFeedback("🎉 太棒了！");
     } else {
+      setHp((prev) => Math.max(prev - 10, 0)); // 答錯扣10，最低0
       setFeedback("😢 再試一次！");
     }
+
     setTimeout(() => {
       setFeedback("");
       setIndex((prev) => (prev + 1) % questions.length);
@@ -60,13 +71,23 @@ export default function RPGWordGame() {
         className="w-36 h-36 mb-4 rounded-full ring-4 ring-purple-400 shadow-xl bg-white bg-opacity-90 p-1"
       />
 
-      <div className="text-2xl bg-white text-gray-800 px-6 py-3 rounded-full shadow-lg mb-6 font-semibold flex gap-6 items-center">
+      <div className="text-2xl bg-white text-gray-800 px-6 py-3 rounded-full shadow-lg mb-2 font-semibold flex gap-6 items-center">
         🧙‍♀️ 等級：<span className="text-blue-600">{level}</span> ｜✨ 經驗值：<span className="text-yellow-600">{exp}</span>
+      </div>
+
+      {/* 血條顯示 */}
+      <div className="w-full max-w-xs bg-red-200 rounded-full h-6 mb-2 shadow-inner overflow-hidden">
+        <div
+          className="bg-red-500 h-full transition-all duration-500"
+          style={{ width: `${(hp / maxHp) * 100}%` }}
+        ></div>
+      </div>
+      <div className="text-sm font-bold text-red-700 mb-6">
+        ❤️ 血量：{hp} / {maxHp}
       </div>
 
       {current.word ? (
         <div className="w-full max-w-xl bg-white bg-opacity-90 rounded-3xl shadow-2xl p-8 text-center">
-          <div className="text-3xl font-bold text-blue-700 mb-4">單字：{current.word}</div>
 
           <button
             onClick={() => speak(current.word)}
