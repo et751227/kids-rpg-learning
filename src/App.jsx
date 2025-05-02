@@ -10,24 +10,18 @@ export default function RPGWordGameMain() {
   const [maxHp, setMaxHp] = useState(50);
   const [hp, setHp] = useState(50);
 
-  const speak = (text) => {
-    const msg = new SpeechSynthesisUtterance(text);
-    msg.lang = "zh-TW";
-    speechSynthesis.speak(msg);
-  };
-
   const loadNewQuestion = () => {
     fetch("https://script.google.com/macros/s/AKfycbwjSr6rDRrqo5xq1ztDsRVDORoBWLGZwwtHSSHKkYLUykjNdao9Va-YN3eg02HTWYMh/exec?type=main")
-      .then((res) => res.json())
-      .then((data) => {
-        const clean = data.filter((item) => item.chinese && item.english);
+      .then(res => res.json())
+      .then(data => {
+        const clean = data.filter(item => item.chinese && item.english);
         const random = clean[Math.floor(Math.random() * clean.length)];
+        setInput([]);
         setQuestion({
           questionText: random.chinese,
           answer: random.english,
-          direction: "中 ➜ 英",
+          direction: "中 ➜ 英"
         });
-        setInput([]);
         setFeedback("");
       });
   };
@@ -35,6 +29,12 @@ export default function RPGWordGameMain() {
   useEffect(() => {
     loadNewQuestion();
   }, []);
+
+  const speak = (text) => {
+    const msg = new SpeechSynthesisUtterance(text);
+    msg.lang = "zh-TW";
+    speechSynthesis.speak(msg);
+  };
 
   const handleLetterClick = (char) => {
     if (input.length < (question?.answer?.length || 0)) {
@@ -76,30 +76,27 @@ export default function RPGWordGameMain() {
     }
   };
 
-  const handleNext = () => {
-    if (feedback) {
-      loadNewQuestion();
-    }
-  };
-
   const renderAlphabetButtons = () => {
     const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
     return (
-      <div className="grid grid-cols-7 gap-4 max-w-xl mx-auto mb-6 px-4">
+      <div className="grid grid-cols-7 gap-4 max-w-xl mx-auto mb-4 px-2">
         {alphabet.map((char) => (
           <button
             key={char}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleLetterClick(char);
-            }}
-            className="bg-yellow-300 hover:bg-yellow-400 text-2xl font-bold py-4 rounded-xl shadow transition-transform active:scale-95 min-w-[56px] min-h-[56px]"
+            onClick={(e) => { e.stopPropagation(); handleLetterClick(char); }}
+            className="bg-yellow-300 hover:bg-yellow-400 text-2xl font-bold py-4 px-5 rounded-xl shadow transition-transform active:scale-95 min-w-[48px] min-h-[48px]"
           >
             {char}
           </button>
         ))}
       </div>
     );
+  };
+
+  const handleNext = () => {
+    if (feedback) {
+      loadNewQuestion();
+    }
   };
 
   if (loading || !question) {
@@ -122,10 +119,10 @@ export default function RPGWordGameMain() {
         className="w-36 h-36 mb-4 rounded-full ring-4 ring-purple-400 shadow-xl bg-white bg-opacity-90 p-1"
       />
 
-      <div className="bg-white bg-opacity-90 px-6 py-4 rounded-2xl shadow-lg mb-4 w-full max-w-xs flex flex-col items-center gap-3">
+      <div className="bg-white bg-opacity-90 px-6 py-4 rounded-2xl shadow-lg mb-6 w-full max-w-xs flex flex-col items-center gap-3">
         <div className="flex gap-4 text-xl font-semibold text-gray-800">
-          <div>🧙‍♀️ 等級：<span className="text-blue-600">{level}</span></div>
-          <div>✨ 經驗值：<span className="text-yellow-600">{exp}</span></div>
+          <div className="whitespace-nowrap">🧙‍♀️ 等級：<span className="text-blue-600">{level}</span></div>
+          <div className="whitespace-nowrap">✨ 經驗值：<span className="text-yellow-600">{exp}</span></div>
         </div>
 
         <div className="w-full bg-red-200 rounded-full h-4 shadow-inner overflow-hidden">
@@ -140,37 +137,33 @@ export default function RPGWordGameMain() {
         </div>
       </div>
 
-      <div className="text-lg italic text-gray-600 mb-2 drop-shadow-md">題型：{question.direction}</div>
-
-      <div className="text-3xl font-bold text-blue-900 mb-4 px-6 py-3 bg-white bg-opacity-80 rounded-xl shadow-lg drop-shadow-xl border border-blue-300 text-center max-w-lg">
+      <div className="text-base italic text-gray-600 mb-1">題型：{question.direction}</div>
+      <div className="text-3xl font-extrabold text-blue-800 bg-white bg-opacity-80 rounded-xl px-6 py-2 mb-3 shadow-lg">
         請拼出：「{question.questionText}」
       </div>
 
       <button
-        onClick={(e) => {
-          e.stopPropagation();
-          speak(question.questionText);
-        }}
+        onClick={(e) => { e.stopPropagation(); speak(question.questionText); }}
         className="mb-4 px-6 py-3 bg-blue-500 text-white text-lg rounded-full shadow hover:bg-blue-600 transition"
       >
         🔊 點我聽發音
       </button>
 
-      <div className="min-h-[48px] mb-4 text-3xl tracking-widest font-mono text-center text-gray-800 bg-white px-6 py-3 rounded-full shadow">
+      <div className="min-h-[48px] mb-4 text-3xl tracking-widest font-mono text-center text-gray-800 bg-white px-6 py-2 rounded-full shadow">
         {input.join("") || "⋯"}
       </div>
 
-      <div className="flex gap-4 mb-6">
-        <button onClick={(e) => { e.stopPropagation(); handleBackspace(); }} className="bg-gray-300 hover:bg-gray-400 px-5 py-2 rounded shadow text-lg">
+      <div className="flex gap-3 mb-6">
+        <button onClick={(e) => { e.stopPropagation(); handleBackspace(); }} className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded shadow">
           ⬅ 退格
         </button>
-        <button onClick={(e) => { e.stopPropagation(); handleClear(); }} className="bg-gray-300 hover:bg-gray-400 px-5 py-2 rounded shadow text-lg">
+        <button onClick={(e) => { e.stopPropagation(); handleClear(); }} className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded shadow">
           🔄 清除
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); handleSubmit(); }}
           disabled={input.length !== question.answer.length}
-          className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded shadow text-lg disabled:opacity-50"
+          className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded shadow disabled:opacity-50"
         >
           ✅ 確認
         </button>
@@ -179,7 +172,7 @@ export default function RPGWordGameMain() {
       {!feedback && renderAlphabetButtons()}
 
       {feedback && (
-        <div className="mt-6 text-2xl font-bold text-center text-white bg-black bg-opacity-70 px-6 py-3 rounded-xl animate-bounce max-w-md">
+        <div className="mt-6 text-2xl font-bold text-center text-white bg-black bg-opacity-60 px-6 py-3 rounded-xl animate-bounce max-w-md">
           {feedback}
         </div>
       )}
