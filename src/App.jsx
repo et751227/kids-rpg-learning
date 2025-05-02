@@ -10,6 +10,12 @@ export default function RPGWordGameMain() {
   const [maxHp, setMaxHp] = useState(50);
   const [hp, setHp] = useState(50);
 
+  const speak = (text) => {
+    const msg = new SpeechSynthesisUtterance(text);
+    msg.lang = "zh-TW"; // 中文語音
+    speechSynthesis.speak(msg);
+  };
+
   const handleLetterClick = (char) => {
     if (input.length < (question?.answer?.length || 0)) {
       setInput([...input, char]);
@@ -35,9 +41,9 @@ export default function RPGWordGameMain() {
         const newMaxHp = 50 + (newLevel - 1) * 10;
         setLevel(newLevel);
         setMaxHp(newMaxHp);
-        setHp(newMaxHp); // 升級回血
+        setHp(newMaxHp);
       } else {
-        setHp(Math.min(hp + 10, maxHp)); // 答對回10滴血但不超過上限
+        setHp(Math.min(hp + 10, maxHp));
       }
       setExp(newExp);
       localStorage.setItem("exp", newExp);
@@ -111,7 +117,14 @@ export default function RPGWordGameMain() {
       </div>
 
       <div className="text-lg text-gray-600 italic mb-2">題型：{question.direction}</div>
-      <div className="text-2xl font-bold text-blue-700 mb-4">請拼出：「{question.questionText}」</div>
+      <div className="text-2xl font-bold text-blue-700 mb-2">請拼出：「{question.questionText}」</div>
+
+      <button
+        onClick={() => speak(question.questionText)}
+        className="mb-4 px-5 py-2 bg-blue-500 text-white text-lg rounded-full shadow hover:bg-blue-600 transition"
+      >
+        🔊 點我聽發音
+      </button>
 
       <div className="min-h-[48px] mb-4 text-3xl tracking-widest font-mono text-center text-gray-800 bg-white px-6 py-2 rounded-full shadow">
         {input.join("") || "⋯"}
