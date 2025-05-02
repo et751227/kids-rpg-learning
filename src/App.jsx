@@ -37,16 +37,16 @@ export default function RPGWordGame() {
       const newLevel = Math.floor(newExp / 50) + 1;
 
       if (newLevel > level) {
-        const nextMaxHp = 50 + (newLevel - 1) * 10; // 每升級加10滴血
+        const nextMaxHp = 50 + (newLevel - 1) * 10;
         setMaxHp(nextMaxHp);
-        setHp(nextMaxHp); // 回滿血
+        setHp(nextMaxHp); // 升級回血
       }
 
       setExp(newExp);
       setLevel(newLevel);
       setFeedback("🎉 太棒了！");
     } else {
-      setHp((prev) => Math.max(prev - 10, 0)); // 答錯扣10，最低0
+      setHp((prev) => Math.max(prev - 10, 0));
       setFeedback("😢 再試一次！");
     }
 
@@ -71,25 +71,28 @@ export default function RPGWordGame() {
         className="w-36 h-36 mb-4 rounded-full ring-4 ring-purple-400 shadow-xl bg-white bg-opacity-90 p-1"
       />
 
-      <div className="text-2xl bg-white text-gray-800 px-6 py-3 rounded-full shadow-lg mb-2 font-semibold flex gap-6 items-center">
-        🧙‍♀️ 等級：<span className="text-blue-600">{level}</span> ｜✨ 經驗值：<span className="text-yellow-600">{exp}</span>
-      </div>
+      {/* 狀態列：等級、經驗值、血條 */}
+      <div className="bg-white bg-opacity-90 px-6 py-4 rounded-2xl shadow-lg mb-6 w-full max-w-xs flex flex-col items-center gap-3">
+        <div className="text-xl font-semibold text-gray-800 flex gap-4">
+          🧙‍♀️ 等級：<span className="text-blue-600">{level}</span>
+          ｜✨ 經驗值：<span className="text-yellow-600">{exp}</span>
+        </div>
 
-      {/* 血條顯示 */}
-      <div className="w-full max-w-xs bg-red-200 rounded-full h-6 mb-2 shadow-inner overflow-hidden">
-        <div
-          className="bg-red-500 h-full transition-all duration-500"
-          style={{ width: `${(hp / maxHp) * 100}%` }}
-        ></div>
-      </div>
-      <div className="mb-6 text-center">
-        <div className="inline-block px-3 py-1 bg-white bg-opacity-80 rounded-full shadow text-red-700 font-bold text-lg tracking-wide border border-red-300">
+        <div className="w-full bg-red-200 rounded-full h-4 shadow-inner overflow-hidden">
+          <div
+            className="bg-red-500 h-full transition-all duration-500"
+            style={{ width: `${(hp / maxHp) * 100}%` }}
+          ></div>
+        </div>
+
+        <div className="inline-block px-3 py-1 bg-white bg-opacity-80 rounded-full shadow text-red-700 font-bold text-sm tracking-wide border border-red-300">
           ❤️ 血量：{hp} / {maxHp}
         </div>
       </div>
 
       {current.word ? (
         <div className="w-full max-w-xl bg-white bg-opacity-90 rounded-3xl shadow-2xl p-8 text-center">
+          <div className="text-3xl font-bold text-blue-700 mb-4">單字：{current.word}</div>
 
           <button
             onClick={() => speak(current.word)}
