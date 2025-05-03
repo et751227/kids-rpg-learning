@@ -1,13 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const STORAGE_KEY = 'challengeRecords';
 
 export function useRecords() {
-  const [records, setRecords] = useState(() => {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  });
+  const [records, setRecords] = useState([]);
 
+  // ✅ 延後讀取 localStorage，避免 SSR 或首載報錯
+  useEffect(() => {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      try {
+        setRecords(JSON.parse(raw));
+      } catch (err) {
+        console.error('localStorage parse error:', err);
+        setRecords([]);
+      }
+    }
+  }, []);
+
+  // ✅ 新增一筆紀錄（準備寫入 localStorage）
   const addRecord = ({ accuracy, wrongList, coins }) => {
     const time = new Date().toLocaleString('zh-TW', {
       year: 'numeric',
@@ -19,8 +30,8 @@ export function useRecords() {
 
     const newRecord = {
       time,
-      accuracy, // 百分比，例如 80
-      wrong: wrongList, // 錯誤的中文題目陣列
+      accuracy,       // e.g. 80 (%)
+      wrong: wrongList, // 陣列：錯誤的題目
       coinsEarned: coins,
     };
 
@@ -29,10 +40,15 @@ export function useRecords() {
     setRecords(updated);
   };
 
+  // ✅ 清除所有成績紀錄
   const clearRecords = () => {
     localStorage.removeItem(STORAGE_KEY);
     setRecords([]);
   };
 
-  return { records, addRecord, clearRecords };
+  return {
+    records,
+    addRecord,
+    clearRecords,
+  };
 }
