@@ -13,7 +13,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <Routes>
         <Route path="/" element={<PracticeMode />} />
         <Route path="/challenge" element={<ChallengeMode />} />
-        <Route path="/records" element={<RecordsPage />} /> {/* ✅ 新增這行 */}
+        <Route path="/records" element={<RecordsPage />} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>
