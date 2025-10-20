@@ -229,7 +229,6 @@ export default function ChallengeMode() {
   };
   const handleLetterClick = (char) => {
     if (gameState !== 'playerTurn') return;
-    const currentQuestion = currentQuestion;
     if (input.length < (currentQuestion?.answer?.length || 0)) {
       setInput([...input, char]);
     }
