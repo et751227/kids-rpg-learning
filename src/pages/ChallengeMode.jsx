@@ -231,7 +231,7 @@ export default function ChallengeMode() {
   return (
     <div
       className="relative min-h-screen w-screen bg-cover bg-center flex flex-col items-center justify-start p-0 overflow-hidden" // 使用 relative 和 overflow-hidden
-      style={{ backgroundImage: "url('/images/challenge_full_background.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }}
+      style={{ backgroundImage: "url('/images/challenge_full_background.png')", backgroundSize: 'cover', backgroundPosition: 'center' }}
     >
       {/* 所有的 UI 元素都使用 absolute 定位 */}
 
