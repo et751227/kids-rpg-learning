@@ -21,7 +21,7 @@ export default function ChallengeMode() {
   const navigate = useNavigate();
   const { addRecord } = useRecords();
 
-  // --- 所有的 State (狀態) ... (不變) ---
+  // --- 所有的 State (狀態) ... (不變) ---
   const [gameState, setGameState] = useState("loading");
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [input, setInput] = useState([]);
@@ -65,7 +65,7 @@ export default function ChallengeMode() {
         setCurrentQuestion({
            questionText: random.chinese,
            answer: random.english.trim(),
-           direction: "中 ➜ 英"
+          	direction: "中 ➜ 英"
         });
         setInput([]);
         setFeedback("請回答！");
@@ -96,7 +96,6 @@ export default function ChallengeMode() {
       if (answerTime < TIME_LIMIT_HEAVY) {
         playerDamage = PLAYER_DAMAGE_HEAVY;
         turnFeedback = `⚡️ 答對了！ ${Math.floor(answerTime/1000)}秒 (重擊)！`;
-section-two-of-two
       } else if (answerTime < TIME_LIMIT_NORMAL) {
         playerDamage = PLAYER_DAMAGE_NORMAL;
         turnFeedback = `⚔️ 答對了！ ${Math.floor(answerTime/1000)}秒 (普通攻擊)。`;
@@ -132,14 +131,14 @@ section-two-of-two
       } else {
         setFeedback(prev => `${prev}\n\n👹 怪物反擊！你受到了 ${monsterDamage} 點傷害！`);
       }
-      if (newPlayerHp <= 0) {
-        handleBattleEnd(false);
-        return;
-      }
-      setTimeout(() => {
-        loadNewQuestion();
-      }, 2000);
-    }, 2000);
+  	  if (newPlayerHp <= 0) {
+  	 	 handleBattleEnd(false);
+  	 	 return;
+  	  }
+  	  setTimeout(() => {
+  	 	 loadNewQuestion();
+  	  }, 2000);
+   }, 2000);
   };
 
   // --- 戰鬥結束處理 (不變) ---
@@ -157,17 +156,17 @@ section-two-of-two
       localStorage.setItem("exp", newExp);
       localStorage.setItem("level", newLevel);
       setExp(newExp);
-      if (newLevel > playerLevel) setPlayerLevel(newLevel);
-    } else {
+    	if (newLevel > playerLevel) setPlayerLevel(newLevel);
+   } else {
       setGameState("defeat");
       setFeedback(`❌ 失敗...你被怪物擊倒了。\n(共 ${totalTurns} 回合)`);
-    }
-    addRecord({
-      accuracy: accuracy,
-      wrongList: uniqueWrongQuestions,
-      coins: didPlayerWin ? rewardAmount : 0,
-      timeTaken: timeTakenInSeconds
-    });
+   }
+   addRecord({
+     accuracy: accuracy,
+     wrongList: uniqueWrongQuestions,
+     coins: didPlayerWin ? rewardAmount : 0,
+     timeTaken: timeTakenInSeconds
+   });
   };
 
   // --- 處理玩家輸入 (不變) ---
@@ -178,172 +177,175 @@ section-two-of-two
   };
   const handleLetterClick = (char) => {
     if (gameState !== 'playerTurn') return;
-    if (input.length < (currentQuestion?.answer?.length || 0)) {
-      setInput([...input, char]);
-    }
+  	if (input.length < (currentQuestion?.answer?.length || 0)) {
+  	  setInput([...input, char]);
+  	}
   };
   const handleBackspace = () => {
     if (gameState !== 'playerTurn') return;
-    setInput(input.slice(0, -1));
+  	setInput(input.slice(0, -1));
   };
   const handleClear = () => {
     if (gameState !== 'playerTurn') return;
-    setInput([]);
+  	setInput([]);
   };
 
-  // --- 🌟 渲染畫面 (全新佈局) 🌟 ---
+  // --- 🌟 渲染畫面 (100% 完整修正版) 🌟 ---
   const isBattleOver = (gameState === 'victory' || gameState === 'defeat');
   const buttonsDisabled = (gameState !== 'playerTurn');
-  
+  
   if (gameState === "loading" && !currentQuestion) {
-     return <div className="p-10 text-3xl text-center animate-bounce text-purple-700">⚔️ 遭遇強敵！準備戰鬥...</div>;
+  	 return <div className="p-10 text-3xl text-center animate-bounce text-purple-700">⚔️ 遭遇強敵！準備戰鬥...</div>;
   }
 
-  // 1. 為了讓 UI 不跑版，我們把整個遊戲包在一個「固定長寬比」的容器中
+  // 1. 為了讓 UI 不跑版，我們把整個遊戲包在一個「固定長寬比」的容器中
   return (
-    // 1A. 這是最外層的黑色背景 (用於手機上下黑邊)
-    <div className="w-full min-h-screen bg-black flex items-center justify-center p-4">
-      
-      {/* 1B. 這是固定 16:9 的遊戲容器 */}
-      <div 
-        className="relative w-full overflow-hidden shadow-2xl rounded-lg" 
-        style={{ maxWidth: '1280px', paddingTop: '56.25%' }} // 16:9 的長寬比
-      >
+    // 1A. 這是最外層的黑色背景 (用於手機上下黑邊)
+  	<div className="w-full min-h-screen bg-black flex items-center justify-center p-4">
+  		
+  	  {/* 1B. 這是固定 16:9 的遊戲容器 */}
+  	  <div 
+  		 className="relative w-full overflow-hidden shadow-2xl rounded-lg" 
+  		 style={{ maxWidth: '1280px', paddingTop: '56.25%' }} // 16:9 的長寬比
+  	  >
 
-        {/* 1C. 這是你的背景圖，它會填滿 16:9 的容器 */}
-        <div
-          className="absolute top-0 left-0 right-0 bottom-0 bg-cover bg-center"
-          // 🌟🌟🌟 確保你的背景圖路徑正確 🌟🌟🌟
-          // 這裡我使用你上傳的檔名
-          style={{ backgroundImage: "url('/images/challenge_full_background.png')" }} 
-        >
-          {/* 所有的 UI 元素都放在這裡面，用百分比定位 */}
+  		 {/* 1C. 這是你的背景圖 (空標籤，只做背景) */}
+  		 <div
+  		   className="absolute top-0 left-0 right-0 bottom-0 bg-cover bg-center"
+  		   // 確保這個路徑是 /public/images/challenge_full_background.jpg (或 .png)
+  		   style={{ backgroundImage: "url('/images/challenge_full_background.png')" }} 
+  		 >
+  		 </div> {/* 1C. 背景圖結束 */}
 
-          {/* 1. 怪物 HP 條 (放置在頂部中央) */}
-          <div className="absolute top-[4%] left-[50%] -translate-x-1/2 w-[40%] max-w-sm h-[4%] z-20">
-            <div className="w-full h-full bg-gray-900 bg-opacity-70 rounded-full shadow-inner overflow-hidden border-2 border-red-900">
-              <div
-                className="bg-red-600 h-full transition-all duration-300 flex items-center justify-end pr-2"
-                style={{ width: `${(monsterHp / monsterMaxHp) * 100}%` }}
-              >
-                  <span className="text-white text-sm font-bold">{monsterHp}</span>
-                </div>
-            </div>
-          </div>
 
-          {/* 2. "DANGER!" 提示 (放置在頂部右側) - 修正版 */}
-          {gameState !== 'loading' && !isBattleOver && (
-            <div 
-              className="absolute top-[4%] right-[4%] 
-                       w-auto min-w-[180px] max-w-[240px] py-3 px-4
-                       bg-red-700 bg-opacity-90 rounded border-2 border-red-300 shadow-lg
-                       flex items-center justify-center z-20
-                       text-white text-md md:text-lg font-bold text-center uppercase animate-pulse"
-            >
-              DANGER!
-            </div>
-          )}
+  		 {/* --- 所有的 UI 元素都放在這裡，作為背景圖的「兄弟」 --- */}
 
-          {/* 3. 戰鬥訊息 (feedback) (放置在中央) */}
-          <div 
-            className="absolute top-[28%] left-1/2 -translate-x-1/2 w-[80%] max-w-lg p-3
-                      text-center text-lg md:text-xl font-bold text-white bg-black bg-opacity-70 rounded-lg shadow-xl
-                      z-30 whitespace-pre-line"
-            style={{ minHeight: '80px', lineHeight: '1.4' }}
-          >
-            {feedback}
-          </div>
+  		   {/* 1. 怪物 HP 條 (放置在頂部中央) */}
+  		   <div className="absolute top-[4%] left-[50%] -translate-x-1/2 w-[40%] max-w-sm h-[4%] z-20">
+  			 <div className="w-full h-full bg-gray-900 bg-opacity-70 rounded-full shadow-inner overflow-hidden border-2 border-red-900">
+  			   <div
+  				 className="bg-red-600 h-full transition-all duration-300 flex items-center justify-end pr-2"
+  				 style={{ width: `${(monsterHp / monsterMaxHp) * 100}%` }}
+  			   >
+  				 	 <span className="text-white text-sm font-bold">{monsterHp}</span>
+  				 </div>
+  			 </div>
+  		   </div>
 
-          {/* 4. 題目區域 (放置在小法師頭頂) */}
-          {!isBattleOver && currentQuestion && (
-            <>
-              <div className="absolute top-[45%] left-1/2 -translate-x-1/2 w-[80%] max-w-lg p-3
-                            bg-white bg-opacity-90 rounded-xl shadow-lg border border-blue-300 text-center z-30">
-                <div className="text-lg md:text-2xl font-extrabold text-blue-900">
-                  請拼出：「{currentQuestion.questionText}」
-                </div>
-              </div>
-              <button
-                onClick={() => speak(currentQuestion.questionText)}
-                disabled={buttonsDisabled}
-                className="absolute top-[55%] left-1/2 -translate-x-1/2 px-6 py-2 bg-blue-500 text-white text-lg rounded-full shadow hover:bg-blue-600 transition disabled:opacity-50 z-30"
-             >
-                🔊 點我聽發音
-              </button>
-            </>
-         )}
+  		   {/* 2. "DANGER!" 提示 (放置在頂部右側) - 修正版 */}
+  		   {gameState !== 'loading' && !isBattleOver && (
+  			 <div 
+  			   className="absolute top-[4%] right-[4%] 
+  						 w-auto min-w-[150px] max-w-[200px] py-2 md:py-3 px-4
+  						 bg-red-700 bg-opacity-90 rounded border-2 border-red-300 shadow-lg
+  						 flex items-center justify-center z-20
+  						 text-white text-sm md:text-lg font-bold text-center uppercase animate-pulse"
+  			 >
+  			   DANGER!
+  			 </div>
+  		   )}
 
-          {/* 5. 輸入框 (放置在法師正前方) */}
-          <div className="absolute top-[65%] left-1/2 -translate-x-1/2 min-h-[48px] w-[80%] max-w-lg
-                        text-3xl tracking-widest font-mono text-center text-gray-800 bg-white px-6 py-2 rounded-full shadow z-30">
-            {input.join("") || "⋯"}
-          </div>
+  		   {/* 3. 戰鬥訊息 (feedback) (放置在中央) */}
+  		   <div 
+  			 className="absolute top-[28%] left-1/2 -translate-x-1/2 w-[80%] max-w-lg p-3
+  						 text-center text-lg md:text-xl font-bold text-white bg-black bg-opacity-70 rounded-lg shadow-xl
+  						 z-30 whitespace-pre-line"
+  			 style={{ minHeight: '80px', lineHeight: '1.4' }}
+  		   >
+  			 {feedback}
+  		   </div>
 
-          {/* 6. 操作按鈕 (退格, 清除, 攻擊) (放置在輸入框下方) */}
-          <div className="absolute top-[75%] left-1/2 -translate-x-1/2 flex gap-3 z-30">
-            <button onClick={handleBackspace} disabled={buttonsDisabled} className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded shadow disabled:opacity-50 text-sm md:text-base">
-              ⬅ 退格
-            </button>
-            <button onClick={handleClear} disabled={buttonsDisabled} className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded shadow disabled:opacity-50 text-sm md:text-base">
-              🔄 清除
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={buttonsDisabled || input.length < 1}
-              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded shadow disabled:opacity-50 text-sm md:text-base"
-            >
-              ✅ 攻擊
-            </button>
-          </div>
+  		   {/* 4. 題目區域 (放置在小法師頭頂) */}
+  		   {!isBattleOver && currentQuestion && (
+  			 <>
+  			   <div className="absolute top-[45%] left-1/2 -translate-x-1/2 w-[80%] max-w-lg p-3
+  							 bg-white bg-opacity-90 rounded-xl shadow-lg border border-blue-300 text-center z-30">
+  				 <div className="text-lg md:text-2xl font-extrabold text-blue-900">
+  				   請拼出：「{currentQuestion.questionText}」
+  				 </div>
+  			   </div>
+  			   <button
+  				 onClick={() => speak(currentQuestion.questionText)}
+  				 disabled={buttonsDisabled}
+  				 className="absolute top-[55%] left-1/2 -translate-x-1/2 px-6 py-2 bg-blue-500 text-white text-lg rounded-full shadow hover:bg-blue-600 transition disabled:opacity-50 z-30"
+  			   >
+  				 🔊 點我聽發音
+  			   </button>
+  			 </>
+  		   )}
 
-          {/* 7. 字母按鈕 (放置在最底部) - 修正版 */}
-          {!isBattleOver && (
-            <div className="absolute bottom-[4%] left-1/2 -translate-x-1/2 
-                         grid grid-cols-7 gap-1 md:gap-2 w-[90%] max-w-xl z-30">
-              {"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((char) => (
-                <button
-                  key={char}
-                  onClick={() => handleLetterClick(char)}
-                  disabled={buttonsDisabled}
-                  className="bg-yellow-300 hover:bg-yellow-400 text-md md:text-lg font-bold py-2 rounded-lg shadow 
-                           transition-transform active:scale-95 disabled:opacity-50 disabled:bg-gray-400"
-                >
-                  {char}
-                </button>
-              ))}
-            </div>
-          )}
-          
-          {/* 8. 戰鬥結束按鈕 (返回世界地圖) */}
-          {isBattleOver && (
-             <button
-                onClick={() => navigate("/")}
-               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 
-                         mt-6 px-8 py-3 bg-blue-600 text-white text-xl rounded-full shadow-lg 
-                         hover:bg-blue-700 transition transform hover:scale-105 z-40"
-             >
-                返回世界地圖
-             </button>
-          )}
+  		   {/* 5. 輸入框 (放置在法師正前方) */}
+  		   <div className="absolute top-[65%] left-1/2 -translate-x-1/2 min-h-[48px] w-[80%] max-w-lg
+  						 text-3xl tracking-widest font-mono text-center text-gray-800 bg-white px-6 py-2 rounded-full shadow z-30">
+  			 {input.join("") || "⋯"}
+  		   </div>
 
-          {/* 9. 玩家資訊 (放置在左下角) + 玩家血條 */}
-          <div className="absolute bottom-[5%] left-[4%] w-[40%] max-w-[250px] z-30 
-                      text-white text-left bg-black bg-opacity-60 p-3 rounded-lg shadow-lg">
-            <div className="text-lg font-bold">🧙‍♀️ 等級：{playerLevel}</div>
-            <div className="text-sm">✨ 經驗值：{exp}</div>
-            {/* 玩家血條 */}
-            <div className="w-full bg-gray-700 rounded-full h-5 shadow-inner overflow-hidden border border-blue-900 mt-2">
-              <div
-                className="bg-blue-500 h-full transition-all duration-300 flex items-center justify-end pr-1"
-                style={{ width: `${(playerHp / playerMaxHp) * 100}%` }}
-              >
-                <span className="text-white text-xs font-bold">{playerHp}</span>
-              </div>
-            </div>
-          </div>
-          
-        </div> {/* 1C. 結束 (背景圖容器) */}
-      </div> {/* 1B. 結束 (16:9 容器) */}
-    </div> // 1A. 結束 (黑色背景)
+  		   {/* 6. 操作按鈕 (退格, 清除, 攻擊) (放置在輸入框下方) */}
+  		   <div className="absolute top-[75%] left-1/2 -translate-x-1/2 flex gap-3 z-30">
+  			 <button onClick={handleBackspace} disabled={buttonsDisabled} className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded shadow disabled:opacity-50 text-sm md:text-base">
+  			   ⬅ 退格
+  			 </button>
+  			 <button onClick={handleClear} disabled={buttonsDisabled} className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded shadow disabled:opacity-50 text-sm md:text-base">
+  			   🔄 清除
+  			 </button>
+  			 <button
+  			   onClick={handleSubmit}
+  			   disabled={buttonsDisabled || input.length < 1}
+  			   className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded shadow disabled:opacity-50 text-sm md:text-base"
+  			 >
+  			   ✅ 攻擊
+  			 </button>
+  		   </div>
+
+  		   {/* 7. 字母按鈕 (放置在最底部) - 修正版 */}
+  		   {!isBattleOver && (
+  			 <div className="absolute bottom-[4%] left-1/2 -translate-x-1/2 
+  						   grid grid-cols-7 gap-1 md:gap-2 w-[90%] max-w-xl z-30">
+  			   {"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((char) => (
+  				 <button
+  				   key={char}
+  				   onClick={() => handleLetterClick(char)}
+  				   disabled={buttonsDisabled}
+  				   className="bg-yellow-300 hover:bg-yellow-400 text-md md:text-lg font-bold py-2 rounded-lg shadow 
+  							 transition-transform active:scale-95 disabled:opacity-50 disabled:bg-gray-400"
+  				 >
+  				   {char}
+  				 </button>
+  			   ))}
+  			 </div>
+  		   )}
+  		   
+  		   {/* 8. 戰鬥結束按鈕 (返回世界地圖) */}
+  		   {isBattleOver && (
+  			  <button
+  				  onClick={() => navigate("/")}
+  				  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 
+  							   mt-6 px-8 py-3 bg-blue-600 text-white text-xl rounded-full shadow-lg 
+  							   hover:bg-blue-700 transition transform hover:scale-105 z-40"
+  			  >
+  				  返回世界地圖
+  			  </button>
+  		   )}
+
+  		   {/* 9. 玩家資訊 (放置在左下角) + 玩家血條 */}
+  		   <div className="absolute bottom-[5%] left-[4%] w-[40%] max-w-[250px] z-30 
+  						 text-white text-left bg-black bg-opacity-60 p-3 rounded-lg shadow-lg">
+  			 <div className="text-lg font-bold">🧙‍♀️ 等級：{playerLevel}</div>
+  			 <div className="text-sm">✨ 經驗值：{exp}</div>
+  			 {/* 玩家血條 */}
+  			 <div className="w-full bg-gray-700 rounded-full h-5 shadow-inner overflow-hidden border border-blue-900 mt-2">
+  			   <div
+  				 className="bg-blue-500 h-full transition-all duration-300 flex items-center justify-end pr-1"
+  				 style={{ width: `${(playerHp / playerMaxHp) * 100}%` }}
+  			   >
+                 <span className="text-white text-xs font-bold">{playerHp}</span>
+               </div>
+  			   </div>
+  			 </div>
+  		 
+  	  </div> {/* 1C. 結束 (背景圖容器的兄弟) */}
+
+  	</div> {/* 1B. 結束 (16:9 容器) */}
+   </div> // 1A. 結束 (黑色背景)
   );
 }
