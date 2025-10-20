@@ -3,16 +3,16 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
-  base: "./",
+  base: "./", // ✅ 用相對路徑，確保 Hash 模式能正確載入
   build: {
-    minify: "terser", // 改用 terser 壓縮器
+    minify: "terser", // ✅ 使用 terser，避免 esbuild 壓縮出錯
     terserOptions: {
       mangle: {
         reserved: [
-          "BrowserRouter",
           "HashRouter",
+          "BrowserRouter",
           "Routes",
-          "Route" // ⚠️ 關鍵：保留這幾個詞不被壓縮掉
+          "Route"
         ],
       },
     },
