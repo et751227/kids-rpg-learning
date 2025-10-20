@@ -270,7 +270,7 @@ section-two-of-two
                 🔊 點我聽發音
               </button>
             </>
-  T       )}
+         )}
 
           {/* 5. 輸入框 (放置在法師正前方) */}
           <div className="absolute top-[65%] left-1/2 -translate-x-1/2 min-h-[48px] w-[80%] max-w-lg
@@ -302,7 +302,7 @@ section-two-of-two
               {"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((char) => (
                 <button
                   key={char}
-D                 onClick={() => handleLetterClick(char)}
+                 onClick={() => handleLetterClick(char)}
                   disabled={buttonsDisabled}
                   className="bg-yellow-300 hover:bg-yellow-400 text-lg md:text-xl font-bold py-2 md:py-3 rounded-lg shadow 
                            transition-transform active:scale-95 disabled:opacity-50 disabled:bg-gray-400"
