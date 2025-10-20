@@ -247,12 +247,18 @@ export default function ChallengeMode() {
         </div>
       </div>
       
-      {/* 2. (Bonus) 怪物攻擊提示 */}
-      {challengeState === 'playing' && (
-        <div className="mb-4 text-center">
-          <img src="/images/monster.png" alt="怪物" className="w-24 h-24 animate-bounce" />
-          <div className="text-white text-lg bg-red-800 bg-opacity-70 px-3 py-1 rounded-full shadow-lg">
-            怪物正在攻擊！
+      {/* 2. (Bonus) 怪物攻擊提示 - 改善版 */}
+      {challengeState === 'playing' && hp > 0 && ( // 確保血量還有才顯示
+        <div className="relative mb-6 w-full max-w-sm flex flex-col items-center">
+          {/* 想像中的怪物位置 (沒有圖案時用空 div 佔位) */}
+          <div className="w-28 h-28 bg-transparent mb-2"></div> 
+          
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 
+                          text-red-500 text-5xl font-extrabold 
+                          bg-red-900 bg-opacity-70 p-4 rounded-xl shadow-lg 
+                          animate-flash-shake z-10 whitespace-nowrap
+                          border-4 border-red-300">
+            危險！怪物攻擊中！
           </div>
         </div>
       )}
