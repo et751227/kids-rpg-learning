@@ -190,7 +190,7 @@ export default function ChallengeMode() {
         setInput([]);
   };
 
-// --- 🌟 渲染畫面 (100% 完整且結構正確的最終版) 🌟 ---
+// --- 🌟 渲染畫面 (最終修正版 - 調整垂直定位) 🌟 ---
   const isBattleOver = (gameState === 'victory' || gameState === 'defeat');
   const buttonsDisabled = (gameState !== 'playerTurn');
 
@@ -211,7 +211,6 @@ export default function ChallengeMode() {
              {/* 1C. 這是你的背景圖 (空標籤，只做背景) */}
              <div
                className="absolute top-0 left-0 right-0 bottom-0 bg-cover bg-center"
-               // 確保這個路徑是 /public/images/challenge_full_background.jpg (或 .png)
                style={{ backgroundImage: "url('/images/challenge_full_background.png')" }}
              >
              </div> {/* 1C. 背景圖結束 */}
@@ -219,8 +218,9 @@ export default function ChallengeMode() {
 
              {/* --- 所有的 UI 元素都放在這裡，作為背景圖的「兄弟」 --- */}
 
-               {/* 1. 怪物 HP 條 (放置在頂部中央) */}
+               {/* 1. 怪物 HP 條 */}
                <div className="absolute top-[4%] left-[50%] -translate-x-1/2 w-[40%] max-w-sm h-[4%] z-20">
+                 {/* ... (怪物 HP 條的 JSX 不變) ... */}
                  <div className="w-full h-full bg-gray-900 bg-opacity-70 rounded-full shadow-inner overflow-hidden border-2 border-red-900">
                    <div
                      className="bg-red-600 h-full transition-all duration-300 flex items-center justify-end pr-2"
@@ -231,7 +231,7 @@ export default function ChallengeMode() {
                  </div>
                </div>
 
-               {/* 2. "DANGER!" 提示 (放置在頂部右側) - 修正版 */}
+               {/* 2. "DANGER!" 提示 */}
                {gameState !== 'loading' && !isBattleOver && (
                  <div
                    className="absolute top-[4%] right-[4%]
@@ -244,7 +244,7 @@ export default function ChallengeMode() {
                  </div>
                )}
 
-               {/* 3. 戰鬥訊息 (feedback) (放置在中央) */}
+               {/* 3. 戰鬥訊息 (feedback) */}
                <div
                  className="absolute top-[28%] left-1/2 -translate-x-1/2 w-[80%] max-w-lg p-3
                              text-center text-lg md:text-xl font-bold text-white bg-black bg-opacity-70 rounded-lg shadow-xl
@@ -254,9 +254,10 @@ export default function ChallengeMode() {
                  {feedback}
                </div>
 
-               {/* 4. 題目區域 (放置在小法師頭頂) */}
+               {/* 4. 題目區域 */}
                {!isBattleOver && currentQuestion && (
                  <>
+                   {/* ... (題目文字和發音按鈕的 JSX 不變) ... */}
                    <div className="absolute top-[45%] left-1/2 -translate-x-1/2 w-[80%] max-w-lg p-3
                                  bg-white bg-opacity-90 rounded-xl shadow-lg border border-blue-300 text-center z-30">
                      <div className="text-lg md:text-2xl font-extrabold text-blue-900">
@@ -273,14 +274,15 @@ export default function ChallengeMode() {
                  </>
                )}
 
-               {/* 5. 輸入框 (放置在法師正前方) */}
+               {/* 5. 輸入框 */}
                <div className="absolute top-[65%] left-1/2 -translate-x-1/2 min-h-[48px] w-[80%] max-w-lg
                              text-3xl tracking-widest font-mono text-center text-gray-800 bg-white px-6 py-2 rounded-full shadow z-30">
                  {input.join("") || "⋯"}
                </div>
 
-               {/* 6. 操作按鈕 (退格, 清除, 攻擊) (放置在輸入框下方) */}
-               <div className="absolute top-[75%] left-1/2 -translate-x-1/2 flex gap-3 z-30">
+               {/* 🌟 6. 操作按鈕 - 垂直定位修正 🌟 */}
+               <div className="absolute top-[74%] left-1/2 -translate-x-1/2 flex gap-3 z-30"> {/* 從 75% 改為 74% */}
+                 {/* ... (三個按鈕的 JSX 不變) ... */}
                  <button onClick={handleBackspace} disabled={buttonsDisabled} className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded shadow disabled:opacity-50 text-sm md:text-base">
                    ⬅ 退格
                  </button>
@@ -296,27 +298,32 @@ export default function ChallengeMode() {
                  </button>
                </div>
 
-              {/* 7. 字母按鈕 (放置在最底部) - iPad 響應式修正 */}
-              {!isBattleOver && (
-                  <div className="absolute bottom-[3%] left-1/2 -translate-x-1/2 
-                                grid grid-cols-7 gap-1 w-[90%] sm:w-[85%] md:w-[80%] max-w-md z-30"> {/* 調整寬度和 Gap */}
-                    {"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((char) => (
-                      <button
-                        key={char}
-                        onClick={() => handleLetterClick(char)}
-                        disabled={buttonsDisabled}
-                        // 🌟 主要修改：減小按鈕 Padding 和字體大小
-                        className="bg-yellow-300 hover:bg-yellow-400 text-xs sm:text-sm md:text-base font-bold p-1 rounded-md md:rounded-lg shadow 
-                                   aspect-square flex items-center justify-center /* 強制方形+置中 */
-                                   transition-transform active:scale-95 disabled:opacity-50 disabled:bg-gray-400"
-                      >
-                        {char}
-                      </button>
-                    ))}
-                  </div>
+               {/* 🌟 7. 字母按鈕 - 垂直定位修正 + iPad 樣式修正 🌟 */}
+               {!isBattleOver && (
+                 <div className="absolute bottom-[2%] left-1/2 -translate-x-1/2 {/* 從 3%/4% 改為 2% */}
+                               grid grid-cols-7 gap-px sm:gap-1 w-[90%] z-30"> {/* 使用修正後的樣式 */}
+                   {"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((char) => (
+                     <button
+                       key={char}
+                       onClick={() => handleLetterClick(char)}
+                       disabled={buttonsDisabled}
+                       className="bg-yellow-300 hover:bg-yellow-400 font-bold
+                                  p-0.5 text-[10px] /* 超小螢幕 */
+                                  xs:p-1 xs:text-xs /* 手機 */
+                                  sm:p-1 sm:text-sm /* 小平板 / 大手機 */
+                                  md:p-2 md:text-base /* 平板 / 電腦 */
+                                  lg:py-3 lg:text-lg /* 大螢幕 */
+                                  rounded shadow
+                                  aspect-square flex items-center justify-center
+                                  transition-transform active:scale-95 disabled:opacity-50 disabled:bg-gray-400"
+                     >
+                       {char}
+                     </button>
+                   ))}
+                 </div>
                )}
 
-               {/* 8. 戰鬥結束按鈕 (返回世界地圖) */}
+               {/* 8. 戰鬥結束按鈕 */}
                {isBattleOver && (
                   <button
                       onClick={() => navigate("/")}
@@ -328,12 +335,12 @@ export default function ChallengeMode() {
                   </button>
                )}
 
-               {/* 9. 玩家資訊 (放置在左下角) + 玩家血條 */}
+               {/* 9. 玩家資訊 */}
                <div className="absolute bottom-[5%] left-[4%] w-[40%] max-w-[250px] z-30
                              text-white text-left bg-black bg-opacity-60 p-3 rounded-lg shadow-lg">
+                 {/* ... (玩家資訊和血條的 JSX 不變) ... */}
                  <div className="text-lg font-bold">🧙‍♀️ 等級：{playerLevel}</div>
                  <div className="text-sm">✨ 經驗值：{exp}</div>
-                 {/* 玩家血條 */}
                  <div className="w-full bg-gray-700 rounded-full h-5 shadow-inner overflow-hidden border border-blue-900 mt-2">
                    <div
                      className="bg-blue-500 h-full transition-all duration-300 flex items-center justify-end pr-1"
