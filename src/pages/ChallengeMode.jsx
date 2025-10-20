@@ -231,13 +231,14 @@ section-two-of-two
             </div>
           </div>
 
-          {/* 2. "DANGER!" 提示 (放置在頂部右側) */}
+          {/* 2. "DANGER!" 提示 (放置在頂部右側) - 修正版 */}
           {gameState !== 'loading' && !isBattleOver && (
             <div 
-              className="absolute top-[4%] right-[4%] w-[25%] max-w-[200px] h-[8%]
+              className="absolute top-[4%] right-[4%] 
+                       w-auto min-w-[180px] max-w-[240px] py-3 px-4
                        bg-red-700 bg-opacity-90 rounded border-2 border-red-300 shadow-lg
                        flex items-center justify-center z-20
-                       text-white text-sm md:text-lg font-bold text-center uppercase animate-pulse"
+                       text-white text-md md:text-lg font-bold text-center uppercase animate-pulse"
             >
               DANGER!
             </div>
@@ -295,16 +296,16 @@ section-two-of-two
             </button>
           </div>
 
-          {/* 7. 字母按鈕 (放置在最底部) */}
+          {/* 7. 字母按鈕 (放置在最底部) - 修正版 */}
           {!isBattleOver && (
             <div className="absolute bottom-[4%] left-1/2 -translate-x-1/2 
                          grid grid-cols-7 gap-1 md:gap-2 w-[90%] max-w-xl z-30">
               {"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((char) => (
                 <button
                   key={char}
-                 onClick={() => handleLetterClick(char)}
+                  onClick={() => handleLetterClick(char)}
                   disabled={buttonsDisabled}
-                  className="bg-yellow-300 hover:bg-yellow-400 text-lg md:text-xl font-bold py-2 md:py-3 rounded-lg shadow 
+                  className="bg-yellow-300 hover:bg-yellow-400 text-md md:text-lg font-bold py-2 rounded-lg shadow 
                            transition-transform active:scale-95 disabled:opacity-50 disabled:bg-gray-400"
                 >
                   {char}
