@@ -1,3 +1,4 @@
+import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import WorldMap from "./pages/WorldMap";
 import PracticeMode from "./pages/PracticeMode";
