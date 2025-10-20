@@ -2,289 +2,322 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRecords } from "../hooks/useRecords"; // 導入 useRecords 來儲存紀錄
 
-// --- 參數化設定 (未來可調整) ---
-const TOTAL_QUESTIONS = 10;                // 1. 每次挑戰的總題數
-const HP_DRAIN_INTERVAL_MS = 5000;         // 2. 每隔 5000 毫秒 (5秒)
-const HP_DRAIN_AMOUNT = 1;                 // 2. 自動扣除 1 滴血
-const WRONG_ANSWER_HP_PENALTY = 10;        // 答錯時的懲罰
-const CHALLENGE_REWARD_EXP = 100;          // 3. 挑戰成功的一次性獎勵
-// ------------------------------------
+// --- 1. 戰鬥參數設定 ---
+const PLAYER_DAMAGE_HEAVY = 15;
+const PLAYER_DAMAGE_NORMAL = 8;
+const PLAYER_DAMAGE_LIGHT = 3;
+const TIME_LIMIT_HEAVY = 5000;  // 5 秒
+const TIME_LIMIT_NORMAL = 10000; // 10 秒
+
+const MONSTER_HP_MIN = 150; // 10 * 重擊
+const MONSTER_HP_MAX = 225; // 15 * 重擊
+
+const MONSTER_DAMAGE_BASE = 5;
+const MONSTER_DAMAGE_PER_LEVEL = 2; // 5. 怪物傷害隨等級提升
+
+//const CHALLENGE_REWARD_EXP = 100; // 3. 成功獎勵
+
+// 輔助函式：取得隨機整數
+function getRandomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 
 export default function ChallengeMode() {
   const navigate = useNavigate();
   const { addRecord } = useRecords(); // 4. 取得新增紀錄的函式
 
-  // 挑戰狀態： 'loading' | 'playing' | 'paused' | 'success' | 'failed'
-  const [challengeState, setChallengeState] = useState("loading");
+  // 遊戲狀態： 'loading' | 'playerTurn' | 'calculating' | 'victory' | 'defeat'
+  const [gameState, setGameState] = useState("loading");
   
-  const [challengeQuestions, setChallengeQuestions] = useState([]); // 10道題目
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0); // 目前題號 (0-9)
-  
-  // 4. 紀錄挑戰數據
-  const [wrongAnswersList, setWrongAnswersList] = useState([]); // 紀錄答錯的題目 (questionText)
-  const timerStartRef = useRef(null); // 紀錄挑戰開始時間
-
+  const [currentQuestion, setCurrentQuestion] = useState(null); // 當前題目
   const [input, setInput] = useState([]);
-  const [feedback, setFeedback] = useState("");
-
-  // 玩家屬性 (從 localStorage 載入)
-  const [exp, setExp] = useState(() => parseInt(localStorage.getItem("exp")) || 0);
-  const [level, setLevel] = useState(() => parseInt(localStorage.getItem("level")) || 1);
-  const [maxHp, setMaxHp] = useState(() => 50 + (parseInt(localStorage.getItem("level") || 1) - 1) * 10);
-  // 挑戰開始時，血量是滿的
-  const [hp, setHp] = useState(() => 50 + (parseInt(localStorage.getItem("level") || 1) - 1) * 10); 
+  const [feedback, setFeedback] = useState("戰鬥開始！"); // 戰鬥訊息
+  const questionStartTimeRef = useRef(null); // 紀錄題目出現時間
   
-  // 1. 載入 10 道題目
+  // --- 戰鬥雙方屬性 ---
+  const [playerLevel, setPlayerLevel] = useState(1);
+  const [playerHp, setPlayerHp] = useState(50);
+  const [playerMaxHp, setPlayerMaxHp] = useState(50);
+  const [exp, setExp] = useState(0);
+
+  const [monsterHp, setMonsterHp] = useState(150);
+  const [monsterMaxHp, setMonsterMaxHp] = useState(150);
+  
+  // --- 4. 紀錄挑戰數據 ---
+  const [totalTurns, setTotalTurns] = useState(0); // 總回合數
+  const [correctAnswers, setCorrectAnswers] = useState(0); // 總答對數
+  const [wrongAnswersList, setWrongAnswersList] = useState([]); // 紀錄答錯的題目
+  const battleTimerStartRef = useRef(null); // 紀錄挑戰總時間
+
+  // --- 初始化 & 載入新題目 ---
+
+  // 載入玩家數據 (只在組件掛載時執行一次)
   useEffect(() => {
-    setChallengeState("loading");
+    const storedLevel = parseInt(localStorage.getItem("level")) || 1;
+    const storedExp = parseInt(localStorage.getItem("exp")) || 0;
+    const calculatedMaxHp = 50 + (storedLevel - 1) * 10;
+    
+    setPlayerLevel(storedLevel);
+    setExp(storedExp);
+    setPlayerMaxHp(calculatedMaxHp);
+    setPlayerHp(calculatedMaxHp); // 每次挑戰都滿血開始
+
+    // 2. 隨機生成怪物血量
+    const newMonsterMaxHp = getRandomInt(MONSTER_HP_MIN, MONSTER_HP_MAX);
+    setMonsterMaxHp(newMonsterMaxHp);
+    setMonsterHp(newMonsterMaxHp);
+
+    battleTimerStartRef.current = Date.now(); // 4. 紀錄戰鬥開始時間
+    loadNewQuestion(); // 載入第一題
+  }, []);
+
+  // 載入新題目的函式
+  const loadNewQuestion = () => {
+    setGameState("loading");
     fetch("https://script.google.com/macros/s/AKfycbwjSr6rDRrqo5xq1ztDsRVDORoBWLGZwwtHSSHKkYLUykjNdao9Va-YN3eg02HTWYMh/exec?type=main")
       .then((res) => res.json())
       .then((data) => {
-        // 洗牌並取出 10 題
-        const shuffled = data
-          .filter(item => item.chinese && item.english)
-          .sort(() => 0.5 - Math.random());
+        const clean = data.filter(item => item.chinese && item.english);
+        const random = clean[Math.floor(Math.random() * clean.length)];
         
-        const challengeSet = shuffled.slice(0, TOTAL_QUESTIONS).map(random => ({
+        setCurrentQuestion({
            questionText: random.chinese,
            answer: random.english.trim(),
            direction: "中 ➜ 英"
-        }));
-
-        setChallengeQuestions(challengeSet);
-        timerStartRef.current = Date.now(); // 4. 紀錄開始時間
-        setChallengeState("playing");
+        });
+        
+        setInput([]);
+        setFeedback("請回答！");
+        setGameState("playerTurn"); // 輪到玩家
+        questionStartTimeRef.current = Date.now(); // 紀錄本題開始時間
       })
       .catch((err) => {
         console.error("載入挑戰題庫失敗", err);
         setFeedback("❌ 題庫載入失敗，請重試");
-        setChallengeState("failed");
       });
-  }, []);
+  };
 
-  // 2. HP 自動扣除 (5秒扣1滴血)
-  useEffect(() => {
-    // 只有在 'playing' 狀態下才計時
-    if (challengeState !== "playing") {
-      return; 
+  // --- 處理答案提交 (核心戰鬥邏輯) ---
+  const handleSubmit = () => {
+    if (gameState !== 'playerTurn') return; // 防止重複提交
+
+    setGameState("calculating"); // 進入結算狀態，暫停玩家操作
+    setTotalTurns(prev => prev + 1); // 4. 總回合+1
+
+    const answerTime = Date.now() - questionStartTimeRef.current;
+    const currentQuestionText = currentQuestion.questionText;
+    const joined = input.join("").toLowerCase();
+    const correct = currentQuestion.answer.toLowerCase();
+
+    let playerDamage = 0;
+    let turnFeedback = "";
+
+    // 1. 判斷答題是否正確
+    if (joined === correct) {
+      setCorrectAnswers(prev => prev + 1); // 4. 答對+1
+
+      // 2. 根據時間計算傷害
+      if (answerTime < TIME_LIMIT_HEAVY) {
+        playerDamage = PLAYER_DAMAGE_HEAVY;
+        turnFeedback = `⚡️ 答對了！ ${Math.floor(answerTime/1000)}秒 (重擊)！`;
+      } else if (answerTime < TIME_LIMIT_NORMAL) {
+        playerDamage = PLAYER_DAMAGE_NORMAL;
+        turnFeedback = `⚔️ 答對了！ ${Math.floor(answerTime/1000)}秒 (普通攻擊)。`;
+      } else {
+        playerDamage = PLAYER_DAMAGE_LIGHT;
+        turnFeedback = `🩹 答對了！ ${Math.floor(answerTime/1000)}秒 (輕擊)。`;
+      }
+      
+    } else {
+      // 答錯
+      playerDamage = 0;
+      turnFeedback = `❌ 答錯了！正確是 ${correct}。`;
+      setWrongAnswersList(prev => [...prev, currentQuestionText]); // 4. 紀錄錯誤題目
     }
-    const timerId = setInterval(() => {
-      setHp((prevHp) => Math.max(0, prevHp - HP_DRAIN_AMOUNT));
-    }, HP_DRAIN_INTERVAL_MS);
+    
+    setFeedback(turnFeedback);
 
-    // 清除計時器
-    return () => clearInterval(timerId);
-  }, [challengeState]); // 當 [challengeState] 改變時 (例如暫停或結束)，重新觸發 effect
-
-  // 2. 檢查血量是否歸零
-  useEffect(() => {
-    if (hp <= 0 && challengeState === "playing") {
-      // 血量歸零，觸發挑戰結束 (標記為失敗)
-      handleChallengeEnd(true); 
+    // --- 玩家行動結算 ---
+    const newMonsterHp = Math.max(0, monsterHp - playerDamage);
+    setMonsterHp(newMonsterHp);
+    if (playerDamage > 0) {
+      setFeedback(prev => `${prev}\n你對怪物造成了 ${playerDamage} 點傷害！`);
     }
-  }, [hp, challengeState]);
 
-  // --- 處理玩家輸入 ---
+    // 檢查怪物是否死亡
+    if (newMonsterHp <= 0) {
+      handleBattleEnd(true); // 玩家勝利
+      return;
+    }
+
+    // --- 怪物行動 (延遲 2 秒，讓玩家看清楚訊息) ---
+    setTimeout(() => {
+      // 5. 怪物傷害根據玩家等級
+      const monsterDamage = MONSTER_DAMAGE_BASE + (playerLevel - 1) * MONSTER_DAMAGE_PER_LEVEL;
+      const newPlayerHp = Math.max(0, playerHp - monsterDamage);
+      
+      setPlayerHp(newPlayerHp);
+      setFeedback(prev => `${prev}\n\n👹 怪物反擊！你受到了 ${monsterDamage} 點傷害！`);
+
+      // 檢查玩家是否死亡
+      if (newPlayerHp <= 0) {
+        handleBattleEnd(false); // 玩家失敗
+        return;
+      }
+
+      // 戰鬥繼續，載入下一題 (再延遲 2 秒)
+      setTimeout(() => {
+        loadNewQuestion();
+      }, 2000);
+
+    }, 2000);
+  };
+
+  // --- 戰鬥結束處理 ---
+  const handleBattleEnd = (didPlayerWin) => {
+    const timeTakenMs = Date.now() - battleTimerStartRef.current;
+    const timeTakenInSeconds = Math.floor(timeTakenMs / 1000);
+    const uniqueWrongQuestions = [...new Set(wrongAnswersList)];
+    const accuracy = totalTurns > 0 ? Math.floor((correctAnswers / totalTurns) * 100) : 100;
+    
+    // 🌟 1. 在這裡定義獎勵 = 怪物最大血量 (取代固定的 100)
+    const rewardAmount = monsterMaxHp;
+    
+    if (didPlayerWin) {
+      // --- 3. 玩家勝利 ---
+      setGameState("victory");
+      
+      // 🌟 2. 使用新的 rewardAmount
+      setFeedback(`🏆 勝利！你擊敗了怪物！\n獲得 ${rewardAmount} EXP！`);
+      //setFeedback(`🏆 勝利！你擊敗了怪物！\n獲得 ${CHALLENGE_REWARD_EXP} EXP！`);
+      // 🌟 3. 使用新的 rewardAmount
+      const newExp = exp + rewardAmount;
+      const newLevel = Math.floor(newExp / 50) + 1;
+      
+      //const newExp = exp + CHALLENGE_REWARD_EXP;
+      //const newLevel = Math.floor(newExp / 50) + 1;
+      
+      // 儲存經驗值和等級
+      localStorage.setItem("exp", newExp);
+      localStorage.setItem("level", newLevel);
+      setExp(newExp);
+      if (newLevel > playerLevel) setPlayerLevel(newLevel);
+
+    } else {
+      // --- 玩家失敗 ---
+      setGameState("defeat");
+      setFeedback(`❌ 失敗...你被怪物擊倒了。\n(共 ${totalTurns} 回合)`);
+    }
+
+    // --- 4. 儲存紀錄 (無論勝敗) ---
+    addRecord({
+      accuracy: accuracy,
+      wrongList: uniqueWrongQuestions,
+      // 🌟 4. 使用新的 rewardAmount
+      coins: didPlayerWin ? rewardAmount : 0,
+      //coins: didPlayerWin ? CHALLENGE_REWARD_EXP : 0,
+      timeTaken: timeTakenInSeconds
+    });
+  };
+
+
+  // --- 處理玩家輸入 (與舊版相同) ---
   const speak = (text) => {
-    if (challengeState !== 'playing') return;
     const msg = new SpeechSynthesisUtterance(text);
     msg.lang = "zh-TW";
     speechSynthesis.speak(msg);
   };
   const handleLetterClick = (char) => {
-    if (challengeState !== 'playing') return;
-    const currentQuestion = challengeQuestions[currentQuestionIndex];
+    if (gameState !== 'playerTurn') return;
+    const currentQuestion = currentQuestion;
     if (input.length < (currentQuestion?.answer?.length || 0)) {
       setInput([...input, char]);
     }
   };
   const handleBackspace = () => {
-    if (challengeState !== 'playing') return;
+    if (gameState !== 'playerTurn') return;
     setInput(input.slice(0, -1));
   };
   const handleClear = () => {
-    if (challengeState !== 'playing') return;
+    if (gameState !== 'playerTurn') return;
     setInput([]);
   };
 
-  // --- 處理答案提交 ---
-  const handleSubmit = () => {
-    if (challengeState !== 'playing') return; // 防止重複提交
-
-    const currentQuestion = challengeQuestions[currentQuestionIndex];
-    const joined = input.join("").toLowerCase();
-    const correct = currentQuestion.answer.toLowerCase();
-
-    setChallengeState("paused"); // 暫停 (停止HP扣血)
-
-    if (joined === correct) {
-      setFeedback("🎉 答對了！");
-    } else {
-      const newHp = Math.max(hp - WRONG_ANSWER_HP_PENALTY, 0);
-      setHp(newHp);
-      // 4. 紀錄錯誤題目
-      setWrongAnswersList(prev => [...prev, currentQuestion.questionText]); 
-      setFeedback(`❌ 錯了！正確是 ${correct}`);
-    }
-
-    // 顯示回饋 1.5 秒後，進入下一題
-    setTimeout(() => {
-      goToNextQuestion();
-    }, 1500);
-  };
-
-  // --- 處理流程控制 ---
-  const goToNextQuestion = () => {
-    // 如果因答錯扣血導致HP歸零，立即結束
-    if (hp <= 0) {
-      handleChallengeEnd(true); // 標記為失敗
-      return;
-    }
-
-    // 檢查是否還有下一題
-    if (currentQuestionIndex < TOTAL_QUESTIONS - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
-      setInput([]);
-      setFeedback("");
-      setChallengeState("playing"); // 恢復遊戲 (HP會繼續扣)
-    } else {
-      // 10 題全部答完，進入結算 (標記為成功)
-      handleChallengeEnd(false); 
-    }
-  };
-
-  // 3 & 4. 挑戰結束，結算獎勵 & 儲存紀錄
-  const handleChallengeEnd = (isFailure) => {
-    // 如果已經結束了，就不要重複執行 (例如扣血歸零 和 答完最後一題 同時發生)
-    if (challengeState !== 'playing' && challengeState !== 'paused') return;
-
-    const challengeFailed = isFailure || hp <= 0;
-    
-    // 4. 計算挑戰數據
-    const timeTakenMs = Date.now() - timerStartRef.current;
-    const timeTakenInSeconds = Math.floor(timeTakenMs / 1000);
-    // 使用 Set 來計算不重複的錯誤題數
-    const uniqueWrongQuestions = [...new Set(wrongAnswersList)];
-    const correctCount = TOTAL_QUESTIONS - uniqueWrongQuestions.length;
-    const accuracy = Math.floor((correctCount / TOTAL_QUESTIONS) * 100);
-
-    // 4. 儲存紀錄 (無論成功或失敗)
-    addRecord({
-      accuracy: accuracy,
-      wrongList: uniqueWrongQuestions,
-      coins: challengeFailed ? 0 : CHALLENGE_REWARD_EXP, // 失敗0獎勵，成功100
-      timeTaken: timeTakenInSeconds // 儲存花了幾秒
-    });
-    
-    if (challengeFailed) {
-      // --- 挑戰失敗 ---
-      setChallengeState("failed");
-      setFeedback(`❌ 挑戰失敗... (正確率 ${accuracy}%)`);
-    } else {
-      // --- 挑戰成功 ---
-      setChallengeState("success");
-      setFeedback(`🏆 挑戰完成！獲得 ${CHALLENGE_REWARD_EXP} EXP (正確率 ${accuracy}%)`);
-
-      // 3. 結算經驗值
-      const newExp = exp + CHALLENGE_REWARD_EXP;
-      const newLevel = Math.floor(newExp / 50) + 1;
-
-      if (newLevel > level) {
-        // 升級了
-        const newMaxHp = 50 + (newLevel - 1) * 10;
-        setLevel(newLevel);
-        setMaxHp(newMaxHp);
-        setHp(newMaxHp); // 升級回滿血
-      } else {
-        // 沒升級，血量不變 (保持挑戰結束時的血量)
-      }
-      
-      setExp(newExp);
-      localStorage.setItem("exp", newExp);
-      localStorage.setItem("level", newLevel);
-    }
-  };
-
   // --- 渲染畫面 ---
-  if (challengeState === "loading" || challengeQuestions.length === 0) {
-    return <div className="p-10 text-3xl text-center animate-bounce text-purple-700">🧠 載入挑戰題中... (共 {TOTAL_QUESTIONS} 題)</div>;
+  const isBattleOver = (gameState === 'victory' || gameState === 'defeat');
+  const buttonsDisabled = (gameState !== 'playerTurn');
+  
+  if (gameState === "loading" && !currentQuestion) {
+     return <div className="p-10 text-3xl text-center animate-bounce text-purple-700">⚔️ 遭遇強敵！準備戰鬥...</div>;
   }
-
-  const currentQuestion = challengeQuestions[currentQuestionIndex];
-  const isGameOver = (challengeState === 'success' || challengeState === 'failed');
-  const buttonsDisabled = (challengeState !== 'playing'); // 字母按鈕是否禁用
 
   return (
     <div
-      className="min-h-screen bg-cover bg-center flex flex-col items-center justify-center p-4 font-sans text-shadow"
-      style={{ backgroundImage: "url('/images/bg-magic.jpg')" }}
+      className="min-h-screen bg-cover bg-center flex flex-col items-center justify-between p-4 font-sans text-shadow"
+      style={{ backgroundImage: "url('/images/bg-magic.jpg')" }} // 你可以換成戰鬥背景
     >
-      <div className="text-5xl font-extrabold text-red-600 mb-2 tracking-wider drop-shadow-md">
-        🏆 章節挑戰模式
-      </div>
       
-      <div className="text-2xl font-bold text-white mb-4 bg-black bg-opacity-60 px-4 py-2 rounded-lg">
-        第 {currentQuestionIndex + 1} / {TOTAL_QUESTIONS} 題
-      </div>
-
-      {/* 玩家屬性顯示 */}
-      <div className="bg-white bg-opacity-90 px-6 py-4 rounded-2xl shadow-lg mb-6 w-full max-w-xs flex flex-col items-center gap-3">
-        {/* ... (等級和經驗值不變) ... */}
-        <div className="flex gap-4 text-xl font-semibold text-gray-800">
-          <div>🧙‍♀️ 等級：<span className="text-blue-600">{level}</span></div>
-          <div>✨ 經驗值：<span className="text-yellow-600">{exp}</span></div>
-        </div>
-        {/* 血條 */}
-        <div className="w-full bg-red-200 rounded-full h-4 shadow-inner overflow-hidden">
-          <div
-            className="bg-red-500 h-full transition-all duration-300"
-            style={{ width: `${(hp / maxHp) * 100}%` }}
-          ></div>
-        </div>
-        <div className="inline-block px-3 py-1 bg-white bg-opacity-80 rounded-full shadow text-red-700 font-bold text-sm tracking-wide border border-red-300">
-          ❤️ 血量：{hp} / {maxHp} 
-          {challengeState === 'playing' && <span className="ml-2 animate-pulse">(每5秒-1)</span>}
-        </div>
-      </div>
-      
-      {/* 2. (Bonus) 怪物攻擊提示 - 改善版 */}
-      {challengeState === 'playing' && hp > 0 && ( // 確保血量還有才顯示
-        <div className="relative mb-6 w-full max-w-sm flex flex-col items-center">
-          {/* 想像中的怪物位置 (沒有圖案時用空 div 佔位) */}
-          <div className="w-28 h-28 bg-transparent mb-2"></div> 
-          
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 
-                          text-red-500 text-5xl font-extrabold 
-                          bg-red-900 bg-opacity-70 p-4 rounded-xl shadow-lg 
-                          animate-flash-shake z-10 whitespace-nowrap
-                          border-4 border-red-300">
-            危險！怪物攻擊中！
+      {/* 區塊 1: 頂部 UI (怪物 & 玩家 狀態) */}
+      <div className="w-full max-w-xl mx-auto p-4 bg-black bg-opacity-60 rounded-xl shadow-lg space-y-4">
+        {/* 怪物狀態 */}
+        <div className="text-center">
+          <div className="text-2xl font-bold text-red-400">👹 森林巨魔 (等級 {playerLevel})</div>
+          {/* 怪物血條 */}
+          <div className="w-full bg-gray-700 rounded-full h-6 shadow-inner overflow-hidden border-2 border-red-900">
+            <div
+              className="bg-red-500 h-full transition-all duration-500 text-right pr-2 text-white font-bold"
+              style={{ width: `${(monsterHp / monsterMaxHp) * 100}%` }}
+            >
+              {monsterHp} / {monsterMaxHp}
+            </div>
           </div>
         </div>
-      )}
+        
+        {/* 玩家狀態 */}
+        <div className="text-center">
+          <div className="text-xl font-bold text-blue-300">🧙‍♀️ 你 (等級 {playerLevel})</div>
+          {/* 玩家血條 */}
+          <div className="w-full bg-gray-700 rounded-full h-5 shadow-inner overflow-hidden border-2 border-blue-900">
+            <div
+              className="bg-blue-500 h-full transition-all duration-500 text-right pr-2 text-white font-bold text-sm"
+              style={{ width: `${(playerHp / playerMaxHp) * 100}%` }}
+            >
+              {playerHp} / {playerMaxHp}
+            </div>
+          </div>
+          <div className="text-sm text-yellow-300">經驗值：{exp}</div>
+        </div>
+      </div>
 
-      {/* 題目區 (只有在遊戲中才顯示) */}
-      {!isGameOver && currentQuestion && (
-        <>
-          <div className="text-lg italic text-gray-600 mb-2">題型：{currentQuestion.direction}</div>
-          <div className="text-2xl font-extrabold text-blue-900 mb-4 px-6 py-3 bg-white bg-opacity-80 rounded-xl shadow-lg drop-shadow-xl border border-blue-300 text-center max-w-lg">
+      {/* 區塊 2: 戰鬥訊息 (取代舊的 "危險!") */}
+      <div 
+        className="my-4 p-4 text-center text-xl font-bold text-white bg-black bg-opacity-70 rounded-lg max-w-xl whitespace-pre-line"
+        style={{ minHeight: '100px' }}
+      >
+        {feedback}
+      </div>
+
+      {/* 區塊 3: 答題區域 (戰鬥中才顯示) */}
+      {!isBattleOver && currentQuestion && (
+        <div className="w-full max-w-xl flex flex-col items-center">
+          <div className="text-2xl font-extrabold text-blue-900 mb-2 px-6 py-3 bg-white bg-opacity-80 rounded-xl shadow-lg drop-shadow-xl border border-blue-300 text-center">
             請拼出：「{currentQuestion.questionText}」
           </div>
 
           <button
             onClick={() => speak(currentQuestion.questionText)}
             disabled={buttonsDisabled}
-            className="mb-5 px-6 py-2 bg-blue-500 text-white text-lg rounded-full shadow hover:bg-blue-600 transition disabled:opacity-50"
+            className="mb-3 px-6 py-2 bg-blue-500 text-white text-lg rounded-full shadow hover:bg-blue-600 transition disabled:opacity-50"
           >
             🔊 點我聽發音
           </button>
 
-          <div className="min-h-[48px] mb-4 text-3xl tracking-widest font-mono text-center text-gray-800 bg-white px-6 py-2 rounded-full shadow">
+          <div className="min-h-[48px] mb-3 text-3xl tracking-widest font-mono text-center text-gray-800 bg-white px-6 py-2 rounded-full shadow">
             {input.join("") || "⋯"}
           </div>
 
           {/* 操作按鈕 */}
-          <div className="flex gap-3 mb-6">
+          <div className="flex gap-3 mb-4">
             <button onClick={handleBackspace} disabled={buttonsDisabled} className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded shadow disabled:opacity-50">
               ⬅ 退格
             </button>
@@ -293,38 +326,17 @@ export default function ChallengeMode() {
             </button>
             <button
               onClick={handleSubmit}
-              disabled={buttonsDisabled || input.length !== currentQuestion.answer.length}
+              disabled={buttonsDisabled || input.length < 1} // 只要有輸入就能按
               className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded shadow disabled:opacity-50"
             >
-              ✅ 確認
+              ✅ 攻擊
             </button>
           </div>
-
-          {/* 字母按鈕 (renderAlphabetButtons) */}
-          <div className="grid grid-cols-7 gap-4 max-w-xl mx-auto mb-4 px-4">
-            {"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((char) => (
-              <button
-                key={char}
-                onClick={() => handleLetterClick(char)}
-                disabled={buttonsDisabled}
-                className="bg-yellow-300 hover:bg-yellow-400 text-2xl font-bold py-3 px-4 rounded-xl shadow transition-transform active:scale-95 min-w-[52px] min-h-[52px] disabled:opacity-50"
-              >
-                {char}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* 回饋/結算 訊息 */}
-      {feedback && (
-        <div className="mt-6 text-2xl font-bold text-center text-white bg-black bg-opacity-60 px-6 py-3 rounded-xl animate-bounce max-w-md">
-          {feedback}
         </div>
       )}
-
-      {/* 遊戲結束按鈕 */}
-      {isGameOver && (
+      
+      {/* 區塊 4: 戰鬥結束 (顯示返回按鈕) */}
+      {isBattleOver && (
          <button
             onClick={() => navigate("/")} // 返回世界地圖
             className="mt-6 px-8 py-3 bg-blue-600 text-white text-xl rounded-full shadow-lg hover:bg-blue-700 transition transform hover:scale-105"
@@ -332,6 +344,26 @@ export default function ChallengeMode() {
             返回世界地圖
           </button>
       )}
+
+      {/* 區塊 5: 字母按鈕 (戰鬥中才顯示) */}
+      {!isBattleOver && (
+        <div className="grid grid-cols-7 gap-4 max-w-xl mx-auto mb-4 px-4 w-full">
+          {"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((char) => (
+            <button
+              key={char}
+              onClick={() => handleLetterClick(char)}
+              disabled={buttonsDisabled}
+              className="bg-yellow-300 hover:bg-yellow-400 text-2xl font-bold py-3 px-4 rounded-xl shadow transition-transform active:scale-95 min-w-[48px] min-h-[48px] disabled:opacity-50 disabled:bg-gray-400"
+            >
+              {char}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* 佔位符，確保 justify-between 正常運作 */}
+      {isBattleOver && <div className="w-full max-w-xl h-40"></div>} 
+      
     </div>
   );
 }
