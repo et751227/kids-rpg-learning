@@ -298,23 +298,19 @@ export default function ChallengeMode() {
                  </button>
                </div>
 
-               {/* 🌟 7. 字母按鈕 - 垂直定位修正 + iPad 樣式修正 🌟 */}
+              {/* 🌟 7. 字母按鈕 (放置在最底部) - 最終簡化修正版 🌟 */}
                {!isBattleOver && (
-                 <div className="absolute bottom-[2%] left-1/2 -translate-x-1/2 {/* 從 3%/4% 改為 2% */}
-                               grid grid-cols-7 gap-px sm:gap-1 w-[90%] z-30"> {/* 使用修正後的樣式 */}
+                 <div className="absolute bottom-[1%] left-1/2 -translate-x-1/2 {/* 再往下移一點 */}
+                               grid grid-cols-7 gap-1 w-[90%] max-w-xl z-30"> {/* 固定 gap, 固定 max-w */}
                    {"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((char) => (
                      <button
                        key={char}
                        onClick={() => handleLetterClick(char)}
                        disabled={buttonsDisabled}
+                       // 🌟 移除複雜響應式, 固定稍小的 Paddin 和 字體, 移除 aspect-square
                        className="bg-yellow-300 hover:bg-yellow-400 font-bold
-                                  p-0.5 text-[10px] /* 超小螢幕 */
-                                  xs:p-1 xs:text-xs /* 手機 */
-                                  sm:p-1 sm:text-sm /* 小平板 / 大手機 */
-                                  md:p-2 md:text-base /* 平板 / 電腦 */
-                                  lg:py-3 lg:text-lg /* 大螢幕 */
-                                  rounded shadow
-                                  aspect-square flex items-center justify-center
+                                  p-2 text-sm /* 固定 Padding 和字體 */
+                                  rounded-lg shadow flex items-center justify-center /* 保留置中 */
                                   transition-transform active:scale-95 disabled:opacity-50 disabled:bg-gray-400"
                      >
                        {char}
