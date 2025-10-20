@@ -215,7 +215,7 @@ section-two-of-two
           className="absolute top-0 left-0 right-0 bottom-0 bg-cover bg-center"
           // 🌟🌟🌟 確保你的背景圖路徑正確 🌟🌟🌟
           // 這裡我使用你上傳的檔名
-          style={{ backgroundImage: "url('/images/challenge_full_background.jpg')" }} 
+          style={{ backgroundImage: "url('/images/challenge_full_background.png')" }} 
         >
           {/* 所有的 UI 元素都放在這裡面，用百分比定位 */}
 
