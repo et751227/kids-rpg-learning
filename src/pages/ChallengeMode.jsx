@@ -111,9 +111,12 @@ export default function ChallengeMode() {
 
     let playerDamage = 0;
     let turnFeedback = "";
-
+    // 🌟 宣告一個變數，用來記錄玩家本回合是否答對
+    let wasPlayerCorrect = false;
+    
     // 1. 判斷答題是否正確
     if (joined === correct) {
+      wasPlayerCorrect = true; // 🌟 答對了
       setCorrectAnswers(prev => prev + 1); // 4. 答對+1
 
       // 2. 根據時間計算傷害
@@ -130,6 +133,7 @@ export default function ChallengeMode() {
       
     } else {
       // 答錯
+      wasPlayerCorrect = false; // 🌟 答錯了
       playerDamage = 0;
       turnFeedback = `❌ 答錯了！正確是 ${correct}。`;
       setWrongAnswersList(prev => [...prev, currentQuestionText]); // 4. 紀錄錯誤題目
@@ -153,22 +157,35 @@ export default function ChallengeMode() {
     // --- 怪物行動 (延遲 2 秒，讓玩家看清楚訊息) ---
     setTimeout(() => {
       // 5. 怪物傷害根據玩家等級
-      const monsterDamage = MONSTER_DAMAGE_BASE + (playerLevel - 1) * MONSTER_DAMAGE_PER_LEVEL;
+      const monsterDamageFull = MONSTER_DAMAGE_BASE + (playerLevel - 1) * MONSTER_DAMAGE_PER_LEVEL;
+      //const monsterDamage = MONSTER_DAMAGE_BASE + (playerLevel - 1) * MONSTER_DAMAGE_PER_LEVEL;
+      // 🌟 根據玩家是否答對，決定最終傷害
+      const monsterDamage = wasPlayerCorrect 
+                              ? Math.floor(monsterDamageFull / 2) // 答對，傷害減半
+                              : monsterDamageFull;              // 答錯，全額傷害
+      
       const newPlayerHp = Math.max(0, playerHp - monsterDamage);
       
       setPlayerHp(newPlayerHp);
       setFeedback(prev => `${prev}\n\n👹 怪物反擊！你受到了 ${monsterDamage} 點傷害！`);
 
+      // 🌟 6. 更新提示訊息，讓玩家知道傷害被減免了
+      if (wasPlayerCorrect) {
+        setFeedback(prev => `${prev}\n\n👹 怪物反擊！你成功格擋！只受到了 ${monsterDamage} 點傷害！`);
+      } else {
+        setFeedback(prev => `${prev}\n\n👹 怪物反擊！你受到了 ${monsterDamage} 點傷害！`);
+      }
+      
       // 檢查玩家是否死亡
       if (newPlayerHp <= 0) {
         handleBattleEnd(false); // 玩家失敗
         return;
       }
 
-      // 戰鬥繼續，載入下一題 (再延遲 2 秒)
+      // 戰鬥繼續，載入下一題 (再延遲 1 秒)
       setTimeout(() => {
         loadNewQuestion();
-      }, 2000);
+      }, 1000);
 
     }, 2000);
   };
