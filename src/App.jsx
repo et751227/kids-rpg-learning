@@ -1,5 +1,9 @@
 import React from "react";
-import { HashRouter as Router, Routes, Route } from "react-router-dom";
+import {
+  HashRouter as Router,
+  Routes,
+  Route
+} from "react-router-dom";
 import WorldMap from "./pages/WorldMap";
 import PracticeMode from "./pages/PracticeMode";
 import ChallengeMode from "./pages/ChallengeMode";
