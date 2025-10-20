@@ -1,4 +1,3 @@
-<Route path="/records" element={<RecordsPage />} />
 // src/pages/RecordsPage.jsx
 import React from 'react';
 import RecordsPanel from '../components/RecordsPanel';
