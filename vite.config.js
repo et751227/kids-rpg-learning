@@ -1,7 +1,20 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
-  base: './', // ✅ 重要：Vercel 靜態部署要用相對路徑
+  base: "./",
+  build: {
+    minify: "terser", // 改用 terser 壓縮器
+    terserOptions: {
+      mangle: {
+        reserved: [
+          "BrowserRouter",
+          "HashRouter",
+          "Routes",
+          "Route" // ⚠️ 關鍵：保留這幾個詞不被壓縮掉
+        ],
+      },
+    },
+  },
 });
