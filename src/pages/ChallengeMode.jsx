@@ -190,7 +190,7 @@ export default function ChallengeMode() {
         setInput([]);
   };
 
-// --- 🌟 渲染畫面 (最終修正版 v4 - 極限壓縮垂直空間) 🌟 ---
+// --- 🌟 渲染畫面 (最終版 v5 - 採納使用者建議) 🌟 ---
   const isBattleOver = (gameState === 'victory' || gameState === 'defeat');
   const buttonsDisabled = (gameState !== 'playerTurn');
 
@@ -226,8 +226,8 @@ export default function ChallengeMode() {
                      className="bg-red-600 h-full transition-all duration-300 flex items-center justify-end pr-2"
                      style={{ width: `${(monsterHp / monsterMaxHp) * 100}%` }}
                    >
-                         <span className="text-white text-xs md:text-sm font-bold">{monsterHp}</span>
-                     </div>
+                     <span className="text-white text-xs md:text-sm font-bold">{monsterHp}</span>
+                   </div>
                  </div>
                </div>
 
@@ -244,45 +244,44 @@ export default function ChallengeMode() {
                  </div>
                )}
 
-               {/* 3. 戰鬥訊息 (feedback) */}
+               {/* 🌟 3. 戰鬥訊息 (feedback) - 縮小寬度 🌟 */}
                <div
-                 className="absolute top-[28%] left-1/2 -translate-x-1/2 w-[80%] max-w-lg p-2 md:p-3
+                 className="absolute top-[28%] left-1/2 -translate-x-1/2 w-[75%] max-w-md p-2 md:p-3 /* 從 max-w-lg 改為 max-w-md */
                              text-center text-base md:text-lg font-bold text-white bg-black bg-opacity-70 rounded-lg shadow-xl
                              z-30 whitespace-pre-line"
-                 style={{ minHeight: '70px', lineHeight: '1.3' }} // 減小 minHeight
+                 style={{ minHeight: '70px', lineHeight: '1.3' }}
                >
                  {feedback}
                </div>
 
-               {/* 🌟 4. 題目區域 - 稍微上移 🌟 */}
+               {/* 🌟 4. 題目區域 - 縮小寬度 🌟 */}
                {!isBattleOver && currentQuestion && (
                  <>
-                   <div className="absolute top-[44%] left-1/2 -translate-x-1/2 w-[80%] max-w-lg p-2 md:p-3
+                   <div className="absolute top-[45%] left-1/2 -translate-x-1/2 w-[75%] max-w-md p-2 md:p-3 /* 從 max-w-lg 改為 max-w-md */
                                  bg-white bg-opacity-90 rounded-xl shadow-lg border border-blue-300 text-center z-30">
                      <div className="text-base md:text-xl font-extrabold text-blue-900">
                        請拼出：「{currentQuestion.questionText}」
                      </div>
                    </div>
-                   {/* 🌟 發音按鈕 - 稍微上移 🌟 */}
+                   {/* 發音按鈕位置不變 */}
                    <button
                      onClick={() => speak(currentQuestion.questionText)}
                      disabled={buttonsDisabled}
-                     className="absolute top-[54%] left-1/2 -translate-x-1/2 px-5 py-1 md:px-6 md:py-2 bg-blue-500 text-white text-sm md:text-lg rounded-full shadow hover:bg-blue-600 transition disabled:opacity-50 z-30"
+                     className="absolute top-[55%] left-1/2 -translate-x-1/2 px-5 py-1 md:px-6 md:py-2 bg-blue-500 text-white text-sm md:text-lg rounded-full shadow hover:bg-blue-600 transition disabled:opacity-50 z-30"
                    >
                      🔊 點我聽發音
                    </button>
                  </>
                )}
 
-               {/* 🌟 5. 輸入框 - 稍微上移 🌟 */}
-               <div className="absolute top-[64%] left-1/2 -translate-x-1/2 min-h-[40px] md:min-h-[48px] w-[80%] max-w-lg
-                             text-2xl md:text-3xl tracking-widest font-mono text-center text-gray-800 bg-white px-4 py-1 md:px-6 md:py-2 rounded-full shadow z-30 flex items-center justify-center"> {/* 使用 flex 垂直置中 */}
+               {/* 🌟 5. 輸入框 - 縮小寬度 🌟 */}
+               <div className="absolute top-[65%] left-1/2 -translate-x-1/2 min-h-[40px] md:min-h-[48px] w-[75%] max-w-md /* 從 max-w-lg 改為 max-w-md */
+                             text-2xl md:text-3xl tracking-widest font-mono text-center text-gray-800 bg-white px-4 py-1 md:px-6 md:py-2 rounded-full shadow z-30 flex items-center justify-center">
                  {input.join("") || "⋯"}
                </div>
 
-               {/* 🌟 6. 操作按鈕 - 稍微上移 🌟 */}
-               <div className="absolute top-[73%] left-1/2 -translate-x-1/2 flex gap-2 md:gap-3 z-30">
-                 {/* ... (按鈕樣式微調 padding/fontsize) ... */}
+               {/* 🌟 6. 操作按鈕 - 移到右側垂直排列 🌟 */}
+               <div className="absolute top-[60%] right-[5%] flex flex-col space-y-2 z-30 md:top-[55%] md:right-[8%] md:space-y-3"> {/* 調整 top/right/spacing */}
                  <button onClick={handleBackspace} disabled={buttonsDisabled} className="bg-gray-300 hover:bg-gray-400 px-3 py-1 md:px-4 md:py-2 rounded shadow disabled:opacity-50 text-xs md:text-sm">
                    ⬅ 退格
                  </button>
@@ -298,24 +297,22 @@ export default function ChallengeMode() {
                  </button>
                </div>
 
-               {/* 🌟 7. 字母按鈕 - 極限壓縮樣式 + 再往下移 🌟 */}
+               {/* 🌟 7. 字母按鈕 - 恢復稍大尺寸 + 保持靠下 🌟 */}
                {!isBattleOver && (
-                 <div className="absolute bottom-[0.5%] left-1/2 -translate-x-1/2 {/* 再往下移 */}
-                               grid grid-cols-7 gap-px w-[95%] sm:w-[90%] md:w-[85%] max-w-lg z-30"> {/* gap 更小, 寬度更大 */}
+                 <div className="absolute bottom-[2%] left-1/2 -translate-x-1/2
+                               grid grid-cols-7 gap-1 md:gap-2 w-[90%] max-w-xl z-30"> {/* 恢復 max-w-xl */}
                    {"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((char) => (
                      <button
                        key={char}
                        onClick={() => handleLetterClick(char)}
                        disabled={buttonsDisabled}
-                       // 🌟 極限壓縮 Padding 和字體, 移除 aspect-square
+                       // 🌟 恢復稍大的 Padding 和字體 (比 v4 稍大)
                        className="bg-yellow-300 hover:bg-yellow-400 font-bold
-                                  p-px text-[10px] /* 預設超小 */
-                                  sm:p-0.5 sm:text-xs /* 手機 */
-                                  md:p-1 md:text-sm /* 平板 */
-                                  lg:p-2 lg:text-base /* 電腦 */
-                                  rounded-sm md:rounded-md shadow flex items-center justify-center /* 簡化圓角 */
+                                  p-1 text-xs /* 手機 */
+                                  sm:p-1 sm:text-sm /* 小平板 / 大手機 */
+                                  md:p-2 md:text-base /* 平板 / 電腦 */
+                                  rounded-md md:rounded-lg shadow flex items-center justify-center /* 恢復圓角 */
                                   transition-transform active:scale-95 disabled:opacity-50 disabled:bg-gray-400"
-                       style={{ minHeight: '30px' }} // 添加最小高度防止被過度壓縮
                      >
                        {char}
                      </button>
@@ -336,9 +333,9 @@ export default function ChallengeMode() {
                )}
 
                {/* 9. 玩家資訊 */}
-               <div className="absolute bottom-[5%] left-[4%] w-auto max-w-[200px] z-30 /* 調整寬度 */
+               <div className="absolute bottom-[5%] left-[4%] w-auto max-w-[200px] z-30
                              text-white text-left bg-black bg-opacity-60 p-2 md:p-3 rounded-lg shadow-lg">
-                 {/* ... (玩家資訊和血條的 JSX 不變, 字體微調) ... */}
+                 {/* ... (玩家資訊和血條的 JSX 不變) ... */}
                  <div className="text-sm md:text-base font-bold">🧙‍♀️ 等級：{playerLevel}</div>
                  <div className="text-xs md:text-sm">✨ 經驗值：{exp}</div>
                  <div className="w-full bg-gray-700 rounded-full h-4 md:h-5 shadow-inner overflow-hidden border border-blue-900 mt-1 md:mt-2">
