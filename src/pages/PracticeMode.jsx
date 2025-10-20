@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useMainQuestions } from "./hooks/useMainQuestions";
+import { useMainQuestions } from "../hooks/useMainQuestions";
 
 export default function RPGWordGameMain() {
   const { question, loading } = useMainQuestions();
