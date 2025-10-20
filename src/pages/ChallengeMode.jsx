@@ -296,22 +296,24 @@ export default function ChallengeMode() {
                  </button>
                </div>
 
-               {/* 7. 字母按鈕 (放置在最底部) - 修正版 */}
-               {!isBattleOver && (
-                 <div className="absolute bottom-[4%] left-1/2 -translate-x-1/2
-                               grid grid-cols-7 gap-1 md:gap-2 w-[90%] max-w-xl z-30">
-                   {"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((char) => (
-                     <button
-                       key={char}
-                       onClick={() => handleLetterClick(char)}
-                       disabled={buttonsDisabled}
-                       className="bg-yellow-300 hover:bg-yellow-400 text-md md:text-lg font-bold py-2 rounded-lg shadow
-                                 transition-transform active:scale-95 disabled:opacity-50 disabled:bg-gray-400"
-                     >
-                       {char}
-                     </button>
-                   ))}
-                 </div>
+              {/* 7. 字母按鈕 (放置在最底部) - iPad 響應式修正 */}
+              {!isBattleOver && (
+                  <div className="absolute bottom-[3%] left-1/2 -translate-x-1/2 
+                                grid grid-cols-7 gap-1 w-[90%] sm:w-[85%] md:w-[80%] max-w-md z-30"> {/* 調整寬度和 Gap */}
+                    {"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((char) => (
+                      <button
+                        key={char}
+                        onClick={() => handleLetterClick(char)}
+                        disabled={buttonsDisabled}
+                        // 🌟 主要修改：減小按鈕 Padding 和字體大小
+                        className="bg-yellow-300 hover:bg-yellow-400 text-xs sm:text-sm md:text-base font-bold p-1 rounded-md md:rounded-lg shadow 
+                                   aspect-square flex items-center justify-center /* 強制方形+置中 */
+                                   transition-transform active:scale-95 disabled:opacity-50 disabled:bg-gray-400"
+                      >
+                        {char}
+                      </button>
+                    ))}
+                  </div>
                )}
 
                {/* 8. 戰鬥結束按鈕 (返回世界地圖) */}
