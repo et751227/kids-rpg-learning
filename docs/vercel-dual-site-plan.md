@@ -9,7 +9,7 @@ Keep the child-facing production site stable while creating a separate portfolio
 | Branch | Role | Expected Data Source |
 | --- | --- | --- |
 | `main` | Production site for daily learning use | Real question source configured in production environment |
-| `portfolio` | Portfolio/demo site | Mock vocabulary data or demo-only question source |
+| `portfolio` | Portfolio/demo site | Mock vocabulary data by default; optional demo-only endpoint |
 | `portfolio-safe-question-source` | PR/refactor branch | Temporary review branch |
 
 ## Recommended Vercel Projects
@@ -31,10 +31,15 @@ VITE_QUESTION_API_URL=<real question API URL>
 
 ### Portfolio site
 
-For the portfolio Vercel project, either:
+For the portfolio Vercel project, leave this unset by default:
 
-1. Do not set `VITE_QUESTION_API_URL`, so the app can use mock vocabulary fallback.
-2. Or set it to a demo-only endpoint that contains no private learning records.
+```env
+# VITE_QUESTION_API_URL is intentionally not set
+```
+
+When `VITE_QUESTION_API_URL` is not set, the `portfolio` branch uses `src/data/mockVocabulary.js` and does not call the real production question source.
+
+Only set `VITE_QUESTION_API_URL` in the portfolio project if it points to a demo-only endpoint that contains no private learning records.
 
 ## Safety Rules
 
@@ -56,6 +61,8 @@ Before using the portfolio site publicly:
 
 ## Current State
 
-The `portfolio` branch was created from the question-source refactor branch. It centralizes question loading through `src/services/questionSource.js` and adds mock vocabulary data in `src/data/mockVocabulary.js`.
+The `portfolio` branch centralizes question loading through `src/services/questionSource.js` and adds mock vocabulary data in `src/data/mockVocabulary.js`.
+
+The `portfolio` branch is mock-first by default. It only calls an external question source when `VITE_QUESTION_API_URL` is explicitly configured.
 
 The existing production `main` branch is not changed by this plan.
