@@ -1,8 +1,5 @@
 import { mockVocabulary } from "../data/mockVocabulary";
 
-const LEGACY_QUESTION_API_URL =
-  "https://script.google.com/macros/s/AKfycbwjSr6rDRrqo5xq1ztDsRVDORoBWLGZwwtHSSHKkYLUykjNdao9Va-YN3eg02HTWYMh/exec?type=main";
-
 function normalizeQuestion(item) {
   return {
     chinese: String(item?.chinese || "").trim(),
@@ -11,23 +8,30 @@ function normalizeQuestion(item) {
 }
 
 function getConfiguredQuestionApiUrl() {
-  return import.meta.env.VITE_QUESTION_API_URL || LEGACY_QUESTION_API_URL;
+  return import.meta.env.VITE_QUESTION_API_URL || "";
+}
+
+async function loadExternalQuestions(questionApiUrl) {
+  const response = await fetch(questionApiUrl);
+  if (!response.ok) {
+    throw new Error(`Question API responded with ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data
+    .map(normalizeQuestion)
+    .filter((item) => item.chinese && item.english);
 }
 
 export async function loadVocabularyQuestions() {
   const questionApiUrl = getConfiguredQuestionApiUrl();
 
+  if (!questionApiUrl) {
+    return mockVocabulary;
+  }
+
   try {
-    const response = await fetch(questionApiUrl);
-    if (!response.ok) {
-      throw new Error(`Question API responded with ${response.status}`);
-    }
-
-    const data = await response.json();
-    const normalized = data
-      .map(normalizeQuestion)
-      .filter((item) => item.chinese && item.english);
-
+    const normalized = await loadExternalQuestions(questionApiUrl);
     if (normalized.length > 0) {
       return normalized;
     }
