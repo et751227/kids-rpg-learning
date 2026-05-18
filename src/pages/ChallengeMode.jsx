@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRecords } from "../hooks/useRecords";
+import { getRandomVocabularyQuestion } from "../services/questionSource";
 
 // --- 戰鬥參數設定 (不變) ---
 const PLAYER_DAMAGE_HEAVY = 15;
@@ -55,27 +56,19 @@ export default function ChallengeMode() {
   }, []);
 
   // --- 載入新題目函式 (不變) ---
-  const loadNewQuestion = () => {
+  const loadNewQuestion = async () => {
     setGameState("loading");
-    fetch("https://script.google.com/macros/s/AKfycbwjSr6rDRrqo5xq1ztDsRVDORoBWLGZwwtHSSHKkYLUykjNdao9Va-YN3eg02HTWYMh/exec?type=main")
-      .then((res) => res.json())
-      .then((data) => {
-        const clean = data.filter(item => item.chinese && item.english);
-        const random = clean[Math.floor(Math.random() * clean.length)];
-        setCurrentQuestion({
-          questionText: random.chinese,
-          answer: random.english.trim(),
-          direction: "中 ➜ 英"
-        });
-        setInput([]);
-        setFeedback("請回答！");
-        setGameState("playerTurn");
-        questionStartTimeRef.current = Date.now();
-      })
-      .catch((err) => {
-        console.error("載入挑戰題庫失敗", err);
-        setFeedback("❌ 題庫載入失敗，請重試");
-      });
+    try {
+      const nextQuestion = await getRandomVocabularyQuestion();
+      setCurrentQuestion(nextQuestion);
+      setInput([]);
+      setFeedback("請回答！");
+      setGameState("playerTurn");
+      questionStartTimeRef.current = Date.now();
+    } catch (err) {
+      console.error("載入挑戰題庫失敗", err);
+      setFeedback("❌ 題庫載入失敗，請重試");
+    }
   };
 
   // --- 處理答案提交 (不變) ---
