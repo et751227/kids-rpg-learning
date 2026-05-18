@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
-import { useMainQuestions } from "../hooks/useMainQuestions";
+import { getRandomVocabularyQuestion } from "../services/questionSource";
 
 export default function RPGWordGameMain() {
-  const { question, loading } = useMainQuestions();
   const [input, setInput] = useState([]);
   const [feedback, setFeedback] = useState("");
   const [exp, setExp] = useState(() => parseInt(localStorage.getItem("exp")) || 0);
@@ -26,20 +25,17 @@ export default function RPGWordGameMain() {
     return () => window.removeEventListener("click", clickHandler);
   }, [feedback]);
 
-  const loadNewQuestion = () => {
+  const loadNewQuestion = async () => {
     setIsLoading(true);
-    fetch("https://script.google.com/macros/s/AKfycbwjSr6rDRrqo5xq1ztDsRVDORoBWLGZwwtHSSHKkYLUykjNdao9Va-YN3eg02HTWYMh/exec?type=main")
-      .then(res => res.json())
-      .then(data => {
-        const clean = data.filter(item => item.chinese && item.english);
-        const random = clean[Math.floor(Math.random() * clean.length)];
-        setCurrentQuestion({
-          questionText: random.chinese,
-          answer: random.english,
-          direction: "中 ➜ 英"
-        });
-        setIsLoading(false);
-      });
+    try {
+      const nextQuestion = await getRandomVocabularyQuestion();
+      setCurrentQuestion(nextQuestion);
+    } catch (error) {
+      console.error("載入拼字題庫失敗", error);
+      setFeedback("❌ 題庫載入失敗，請重試");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const speak = (text) => {
