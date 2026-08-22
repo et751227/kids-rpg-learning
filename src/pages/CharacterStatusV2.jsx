@@ -1,27 +1,33 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  BASE_STATS,
-  playerMaxHp,
-  remainingStatPoints,
-  timingThresholds,
-} from "../game/battleRulesV2";
+import LearningSessionGate from "../components/LearningSessionGate";
+import { learningApi } from "../api/learningClient";
+import { BASE_STATS, playerMaxHp, remainingStatPoints, timingThresholds } from "../game/battleRulesV2";
 
-const STORAGE_KEY = "battleV2DraftStats";
-
-function readInitialStats() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-    if (saved?.strength && saved?.vitality && saved?.agility) return saved;
-  } catch (_) {}
-  return { ...BASE_STATS };
-}
-
-export default function CharacterStatusV2() {
+function CharacterStatusContent() {
   const navigate = useNavigate();
-  const level = Number(localStorage.getItem("level") || 1);
-  const [stats, setStats] = useState(readInitialStats);
+  const [level, setLevel] = useState(1);
+  const [exp, setExp] = useState(0);
+  const [stats, setStats] = useState({ ...BASE_STATS });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
   const remaining = remainingStatPoints(level, stats);
+
+  useEffect(() => {
+    learningApi.progress()
+      .then((data) => {
+        setLevel(Number(data.level || 1));
+        setExp(Number(data.exp || 0));
+        setStats({
+          strength: Number(data.stats?.strength || 1),
+          vitality: Number(data.stats?.vitality || 1),
+          agility: Number(data.stats?.agility || 1),
+        });
+      })
+      .catch(() => setMessage("角色資料讀取失敗"))
+      .finally(() => setLoading(false));
+  }, []);
 
   const preview = useMemo(() => {
     const thresholds = timingThresholds(stats.agility);
@@ -41,15 +47,21 @@ export default function CharacterStatusV2() {
     });
   };
 
-  const saveAndTest = () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
-    navigate("/challenge-v2");
+  const saveAndBattle = async () => {
+    setSaving(true);
+    setMessage("");
+    try {
+      const saved = await learningApi.saveStats(stats);
+      setStats(saved.stats || stats);
+      navigate("/challenge");
+    } catch (error) {
+      setMessage(error.body?.error === "stat_budget_exceeded" ? "配點超過目前等級可用點數" : "角色能力儲存失敗");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const reset = () => {
-    setStats({ ...BASE_STATS });
-    localStorage.removeItem(STORAGE_KEY);
-  };
+  if (loading) return <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center text-xl">正在讀取角色狀態…</div>;
 
   const cards = [
     { key: "strength", label: "力量", icon: "⚔️", help: "提高每次答對時造成的傷害" },
@@ -63,8 +75,8 @@ export default function CharacterStatusV2() {
         <div className="flex items-center justify-between mb-6">
           <button onClick={() => navigate("/")} className="px-4 py-2 rounded-lg bg-slate-700">← 回地圖</button>
           <div className="text-right">
-            <div className="text-2xl font-bold">角色狀態測試版</div>
-            <div className="text-sm text-slate-300">Lv.{level} · 剩餘點數 {remaining}</div>
+            <div className="text-2xl font-bold">角色狀態</div>
+            <div className="text-sm text-slate-300">Lv.{level} · EXP {exp} · 剩餘點數 {remaining}</div>
           </div>
         </div>
 
@@ -74,7 +86,7 @@ export default function CharacterStatusV2() {
               <div className="text-2xl font-bold mb-2">{item.icon} {item.label}</div>
               <div className="text-slate-300 min-h-[48px] mb-4">{item.help}</div>
               <div className="flex items-center justify-center gap-4">
-                <button onClick={() => changeStat(item.key, -1)} className="w-12 h-12 text-2xl rounded-full bg-slate-600">−</button>
+                <button onClick={() => changeStat(item.key, -1)} disabled={stats[item.key] <= 1} className="w-12 h-12 text-2xl rounded-full bg-slate-600 disabled:opacity-40">−</button>
                 <div className="text-4xl font-extrabold min-w-[56px] text-center">{stats[item.key]}</div>
                 <button onClick={() => changeStat(item.key, 1)} disabled={remaining <= 0} className="w-12 h-12 text-2xl rounded-full bg-indigo-600 disabled:opacity-40">＋</button>
               </div>
@@ -91,15 +103,17 @@ export default function CharacterStatusV2() {
           </div>
         </div>
 
-        <div className="flex gap-3 justify-center">
-          <button onClick={reset} className="px-6 py-3 rounded-xl bg-slate-700 text-lg font-bold">重新配點</button>
-          <button onClick={saveAndTest} className="px-8 py-3 rounded-xl bg-green-600 text-lg font-bold">用這組能力去打怪</button>
-        </div>
-
-        <div className="mt-5 text-xs text-slate-400 text-center">
-          驗證分支使用暫存 localStorage；正式版通過測試後才會改接 PostgreSQL/API。
+        {message && <div className="text-center text-amber-300 mb-4">{message}</div>}
+        <div className="flex justify-center">
+          <button onClick={saveAndBattle} disabled={saving} className="px-8 py-3 rounded-xl bg-green-600 text-lg font-bold disabled:opacity-40">
+            {saving ? "儲存中…" : "儲存能力並去打怪"}
+          </button>
         </div>
       </div>
     </div>
   );
+}
+
+export default function CharacterStatusV2() {
+  return <LearningSessionGate><CharacterStatusContent /></LearningSessionGate>;
 }
