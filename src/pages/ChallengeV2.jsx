@@ -4,7 +4,17 @@ import LearningSessionGate from "../components/LearningSessionGate";
 import { learningApi } from "../api/learningClient";
 import { attackResult, monsterDamage, monsterMaxHp, playerMaxHp, timingThresholds } from "../game/battleRulesV2";
 
-const newId = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+const newId = () => {
+  const cryptoApi = globalThis.crypto;
+  if (cryptoApi?.randomUUID) return cryptoApi.randomUUID();
+  if (!cryptoApi?.getRandomValues) throw new Error("secure_crypto_unavailable");
+  const bytes = new Uint8Array(16);
+  cryptoApi.getRandomValues(bytes);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+};
 
 function ChallengeContent() {
   const navigate = useNavigate();
@@ -20,6 +30,7 @@ function ChallengeContent() {
   const [rounds, setRounds] = useState(0);
   const questionStartedAt = useRef(Date.now());
   const sessionKey = useRef(`battle-v2-${newId()}`);
+  const attemptId = useRef(null);
 
   const maxPlayerHp = playerMaxHp(level, stats.vitality);
   const maxMonsterHp = monsterMaxHp(level);
@@ -30,6 +41,7 @@ function ChallengeContent() {
     setQuestion(data.question);
     setInput([]);
     setAnswerLocked(false);
+    attemptId.current = newId();
     questionStartedAt.current = Date.now();
   };
 
@@ -61,11 +73,16 @@ function ChallengeContent() {
 
   const submit = async () => {
     if (answerLocked || !question || !input.length || playerHp <= 0 || monsterHp <= 0) return;
+    if (!attemptId.current) {
+      setFeedback("本題識別碼遺失，請重新載入題目");
+      return;
+    }
     setAnswerLocked(true);
     const responseTimeMs = Date.now() - questionStartedAt.current;
+    const currentAttemptId = attemptId.current;
     try {
       const result = await learningApi.submitAttempt({
-        attemptId: newId(),
+        attemptId: currentAttemptId,
         vocabularyId: question.vocabularyId,
         sessionKey: sessionKey.current,
         mode: "challenge",
@@ -113,6 +130,7 @@ function ChallengeContent() {
 
   const restart = async () => {
     sessionKey.current = `battle-v2-${newId()}`;
+    attemptId.current = null;
     setPlayerHp(maxPlayerHp);
     setMonsterHp(maxMonsterHp);
     setRounds(0);
