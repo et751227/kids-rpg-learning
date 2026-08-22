@@ -28,6 +28,7 @@ export default function ChallengeV2() {
   const [input, setInput] = useState([]);
   const [feedback, setFeedback] = useState("準備戰鬥！");
   const [loading, setLoading] = useState(true);
+  const [answerLocked, setAnswerLocked] = useState(false);
   const [playerHp, setPlayerHp] = useState(() => playerMaxHp(level, stats.vitality));
   const [monsterHp, setMonsterHp] = useState(() => monsterMaxHp(level));
   const [rounds, setRounds] = useState(0);
@@ -58,11 +59,14 @@ export default function ChallengeV2() {
     const next = source[Math.floor(Math.random() * source.length)];
     setQuestion(next);
     setInput([]);
+    setAnswerLocked(false);
     questionStartedAt.current = Date.now();
   };
 
   const submit = () => {
-    if (!question || !input.length || playerHp <= 0 || monsterHp <= 0) return;
+    if (answerLocked || !question || !input.length || playerHp <= 0 || monsterHp <= 0) return;
+    setAnswerLocked(true);
+
     const responseTimeMs = Date.now() - questionStartedAt.current;
     const correct = input.join("").toLowerCase() === question.english.toLowerCase();
     const attack = attackResult({ strength: stats.strength, agility: stats.agility, responseTimeMs, correct });
@@ -98,12 +102,15 @@ export default function ChallengeV2() {
     setMonsterHp(maxMonsterHp);
     setRounds(0);
     setFeedback("再試一次！");
+    setAnswerLocked(false);
     pickNext();
   };
 
   if (loading && !question) {
     return <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center text-2xl">載入 Battle v2 測試中…</div>;
   }
+
+  const controlsDisabled = answerLocked || !question || playerHp <= 0 || monsterHp <= 0;
 
   return (
     <div className="min-h-screen bg-slate-950 text-white p-3 md:p-5 flex items-center justify-center">
@@ -132,8 +139,12 @@ export default function ChallengeV2() {
             </div>
             <div className="grid grid-cols-7 gap-2 flex-1 content-center">
               {"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((char) => (
-                <button key={char} onClick={() => input.length < (question?.english.length || 0) && setInput((v) => [...v, char])}
-                  className="min-h-[48px] md:min-h-[56px] rounded-xl bg-yellow-300 text-slate-900 text-lg md:text-xl font-bold active:scale-95">
+                <button
+                  key={char}
+                  onClick={() => input.length < (question?.english.length || 0) && setInput((v) => [...v, char])}
+                  disabled={controlsDisabled}
+                  className="min-h-[48px] md:min-h-[56px] rounded-xl bg-yellow-300 text-slate-900 text-lg md:text-xl font-bold active:scale-95 disabled:opacity-40"
+                >
                   {char}
                 </button>
               ))}
@@ -141,9 +152,9 @@ export default function ChallengeV2() {
           </div>
 
           <div className="grid grid-rows-4 gap-3">
-            <button onClick={() => setInput((v) => v.slice(0, -1))} className="rounded-xl bg-slate-500 text-lg font-bold min-h-[56px]">⬅ 退格</button>
-            <button onClick={() => setInput([])} className="rounded-xl bg-slate-500 text-lg font-bold min-h-[56px]">🔄 清除</button>
-            <button onClick={submit} disabled={!input.length || playerHp <= 0 || monsterHp <= 0} className="rounded-xl bg-green-600 text-xl font-extrabold min-h-[64px] disabled:opacity-40">✅ 確認</button>
+            <button onClick={() => setInput((v) => v.slice(0, -1))} disabled={controlsDisabled} className="rounded-xl bg-slate-500 text-lg font-bold min-h-[56px] disabled:opacity-40">⬅ 退格</button>
+            <button onClick={() => setInput([])} disabled={controlsDisabled} className="rounded-xl bg-slate-500 text-lg font-bold min-h-[56px] disabled:opacity-40">🔄 清除</button>
+            <button onClick={submit} disabled={controlsDisabled || !input.length} className="rounded-xl bg-green-600 text-xl font-extrabold min-h-[64px] disabled:opacity-40">✅ 確認</button>
             <button onClick={restart} className="rounded-xl bg-indigo-600 text-lg font-bold min-h-[56px]">再打一場</button>
           </div>
         </div>
