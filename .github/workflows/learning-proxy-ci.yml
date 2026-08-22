@@ -1,0 +1,47 @@
+name: Kids Learning Proxy CI
+
+on:
+  pull_request:
+    paths:
+      - "api/learning/**"
+      - "server/learning-proxy.cjs"
+      - "src/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/learning-proxy-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Check server-side proxy syntax
+        run: |
+          node --check server/learning-proxy.cjs
+          for file in api/learning/*.js; do node --check "$file"; done
+
+      - name: Enforce server-side identity and secret boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -R -E '66\.245\.216\.28|player-[0-9]|水晶公主|KIDS_LEARNING_INGRESS_TOKEN[[:space:]]*=' api/learning server/learning-proxy.cjs
+          grep -q 'KIDS_LEARNING_PLAYER_ID' server/learning-proxy.cjs
+          grep -q 'KIDS_LEARNING_INGRESS_TOKEN' server/learning-proxy.cjs
+          grep -q 'KIDS_FAMILY_ACCESS_KEY' server/learning-proxy.cjs
+          grep -q 'KIDS_SESSION_SECRET' server/learning-proxy.cjs
