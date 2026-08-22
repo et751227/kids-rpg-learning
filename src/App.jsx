@@ -8,6 +8,8 @@ import {
 import WorldMap from "./pages/WorldMap";
 import PracticeMode from "./pages/PracticeMode";
 import ChallengeMode from "./pages/ChallengeMode";
+import ChallengeV2 from "./pages/ChallengeV2";
+import CharacterStatusV2 from "./pages/CharacterStatusV2";
 import RecordsPage from "./pages/RecordsPage";
 
 export default function App() {
@@ -16,7 +18,10 @@ export default function App() {
       <Routes>
         <Route path="/" element={<WorldMap />} />
         <Route path="/practice" element={<PracticeMode />} />
-        <Route path="/challenge" element={<ChallengeMode />} />
+        <Route path="/challenge" element={<ChallengeV2 />} />
+        <Route path="/challenge-v2" element={<ChallengeV2 />} />
+        <Route path="/challenge-legacy" element={<ChallengeMode />} />
+        <Route path="/status-v2" element={<CharacterStatusV2 />} />
         <Route path="/records" element={<RecordsPage />} />
       </Routes>
     </HashRouter>
