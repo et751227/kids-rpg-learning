@@ -1,5 +1,6 @@
-const crypto = require("node:crypto");
 const { noStore, playerId, requireSession, upstream } = require("../../server/learning-proxy.cjs");
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 module.exports = async function handler(req, res) {
   noStore(res);
@@ -9,8 +10,8 @@ module.exports = async function handler(req, res) {
   }
   if (!requireSession(req, res)) return;
 
-  const { vocabularyId, submittedAnswer, responseTimeMs, mode, sessionKey, metadata } = req.body || {};
-  if (typeof vocabularyId !== "string" || typeof submittedAnswer !== "string") {
+  const { attemptId, vocabularyId, submittedAnswer, responseTimeMs, mode, sessionKey, metadata } = req.body || {};
+  if (!UUID_RE.test(attemptId || "") || typeof vocabularyId !== "string" || typeof submittedAnswer !== "string") {
     return res.status(400).json({ error: "invalid_attempt" });
   }
   if (responseTimeMs !== undefined && (!Number.isInteger(responseTimeMs) || responseTimeMs < 0)) {
@@ -18,7 +19,7 @@ module.exports = async function handler(req, res) {
   }
 
   const body = {
-    attemptId: crypto.randomUUID(),
+    attemptId,
     vocabularyId,
     submittedAnswer,
     responseTimeMs,
