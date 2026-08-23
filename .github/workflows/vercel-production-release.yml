@@ -4,8 +4,13 @@ on:
   pull_request:
     paths:
       - ".github/workflows/vercel-production-release.yml"
+      - "ops/release/kids-production.request"
   issue_comment:
     types: [created]
+  push:
+    branches: [main]
+    paths:
+      - "ops/release/kids-production.request"
 
 permissions:
   contents: read
@@ -29,13 +34,15 @@ jobs:
           grep -Fq 'target:"production"' .github/workflows/vercel-production-release.yml
           ! grep -Fq 'release-preview' .github/workflows/vercel-production-release.yml
           grep -Fq 'VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}' .github/workflows/vercel-production-release.yml
+          grep -Fq 'ops/release/kids-production.request' .github/workflows/vercel-production-release.yml
 
   deploy:
     if: >-
-      github.event_name == 'issue_comment' &&
-      github.actor == 'et751227' &&
-      github.event.issue.title == 'OPS: kids learning release control' &&
-      github.event.comment.body == '/release-production-main'
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'issue_comment' &&
+       github.actor == 'et751227' &&
+       github.event.issue.title == 'OPS: kids learning release control' &&
+       github.event.comment.body == '/release-production-main')
     runs-on: [self-hosted, linux, x64, life-core, general-ci]
     timeout-minutes: 15
     env:
