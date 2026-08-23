@@ -1,3 +1,3 @@
 release=kids-learning-production
-requested_at=2026-08-23T19:05:00+08:00
-reason=retry-after-clearing-stale-production-deploy-lock
+requested_at=2026-08-23T19:07:00+08:00
+reason=observable-production-release-retry
