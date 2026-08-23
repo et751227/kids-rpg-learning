@@ -43,7 +43,7 @@ jobs:
     timeout-minutes: 15
     concurrency:
       group: kids-vercel-production-release
-      cancel-in-progress: false
+      cancel-in-progress: true
     env:
       VERCEL_TEAM_ID: team_NeSOdC6JTV1nSbIXrzLhdhdS
       VERCEL_PROJECT_ID: prj_JzsuuFKzhP6GpuieneGtN3I9VG8O
