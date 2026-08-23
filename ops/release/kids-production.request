@@ -1,0 +1,3 @@
+release=kids-learning-production
+requested_at=2026-08-23T17:31:00+08:00
+reason=activate-deterministic-production-release-trigger
