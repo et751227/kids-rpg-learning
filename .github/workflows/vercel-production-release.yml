@@ -23,7 +23,7 @@ concurrency:
 jobs:
   verify-workflow:
     if: github.event_name == 'pull_request'
-    runs-on: [self-hosted, linux, x64, life-core, general-ci]
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
@@ -43,7 +43,7 @@ jobs:
        github.actor == 'et751227' &&
        github.event.issue.title == 'OPS: kids learning release control' &&
        github.event.comment.body == '/release-production-main')
-    runs-on: [self-hosted, linux, x64, life-core, general-ci]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
       VERCEL_TEAM_ID: team_NeSOdC6JTV1nSbIXrzLhdhdS
