@@ -14,7 +14,7 @@ on:
 
 permissions:
   contents: read
-  issues: read
+  issues: write
 
 jobs:
   verify-workflow:
@@ -50,7 +50,21 @@ jobs:
       VERCEL_PROJECT_NAME: kids-rpg-learning
       GITHUB_REPO_ID: "975869181"
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      RELEASE_ISSUE: "9"
     steps:
+      - name: Report release start
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          body="KIDS_RELEASE_START run=${GITHUB_RUN_ID} sha=${GITHUB_SHA}"
+          curl --silent --show-error --fail -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/${RELEASE_ISSUE}/comments" \
+            -d "$(jq -n --arg body "$body" '{body:$body}')" >/dev/null
+
       - name: Require deployment credential
         shell: bash
         run: |
@@ -110,3 +124,19 @@ jobs:
             sleep 5
           done
           exit 1
+
+      - name: Report release outcome
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_STATUS: ${{ job.status }}
+          DEPLOYMENT_ID: ${{ steps.create.outputs.deployment_id }}
+        run: |
+          set -euo pipefail
+          body="KIDS_RELEASE_RESULT run=${GITHUB_RUN_ID} status=${JOB_STATUS} deployment=${DEPLOYMENT_ID:-none} sha=${GITHUB_SHA}"
+          curl --silent --show-error --fail -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/${RELEASE_ISSUE}/comments" \
+            -d "$(jq -n --arg body "$body" '{body:$body}')" >/dev/null
