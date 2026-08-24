@@ -1,8 +1,7 @@
-import { useState, useEffect } from "react";
-import { useMainQuestions } from "../hooks/useMainQuestions";
+import { useEffect, useState } from "react";
+import AnswerPad from "../components/AnswerPad";
 
 export default function RPGWordGameMain() {
-  const { question, loading } = useMainQuestions();
   const [input, setInput] = useState([]);
   const [feedback, setFeedback] = useState("");
   const [exp, setExp] = useState(() => parseInt(localStorage.getItem("exp")) || 0);
@@ -18,9 +17,7 @@ export default function RPGWordGameMain() {
 
   useEffect(() => {
     const clickHandler = () => {
-      if (feedback) {
-        handleNext();
-      }
+      if (feedback) handleNext();
     };
     window.addEventListener("click", clickHandler);
     return () => window.removeEventListener("click", clickHandler);
@@ -29,14 +26,14 @@ export default function RPGWordGameMain() {
   const loadNewQuestion = () => {
     setIsLoading(true);
     fetch("https://script.google.com/macros/s/AKfycbwjSr6rDRrqo5xq1ztDsRVDORoBWLGZwwtHSSHKkYLUykjNdao9Va-YN3eg02HTWYMh/exec?type=main")
-      .then(res => res.json())
-      .then(data => {
-        const clean = data.filter(item => item.chinese && item.english);
+      .then((res) => res.json())
+      .then((data) => {
+        const clean = data.filter((item) => item.chinese && item.english);
         const random = clean[Math.floor(Math.random() * clean.length)];
         setCurrentQuestion({
           questionText: random.chinese,
           answer: random.english,
-          direction: "中 ➜ 英"
+          direction: "中 ➜ 英",
         });
         setIsLoading(false);
       });
@@ -50,16 +47,8 @@ export default function RPGWordGameMain() {
 
   const handleLetterClick = (char) => {
     if (input.length < (currentQuestion?.answer?.length || 0)) {
-      setInput([...input, char]);
+      setInput((value) => [...value, char]);
     }
-  };
-
-  const handleBackspace = () => {
-    setInput(input.slice(0, -1));
-  };
-
-  const handleClear = () => {
-    setInput([]);
   };
 
   const handleSubmit = () => {
@@ -82,8 +71,7 @@ export default function RPGWordGameMain() {
       localStorage.setItem("level", newLevel);
       setFeedback("🎉 答對了！點擊任意處繼續...");
     } else {
-      const newHp = Math.max(hp - 10, 0);
-      setHp(newHp);
+      setHp(Math.max(hp - 10, 0));
       setFeedback(`❌ 錯了！正確是 ${correct}，點擊任意處繼續...`);
     }
   };
@@ -94,94 +82,71 @@ export default function RPGWordGameMain() {
     loadNewQuestion();
   };
 
-  const renderAlphabetButtons = () => {
-    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-    return (
-      <div className="grid grid-cols-7 gap-4 max-w-md mx-auto mb-4 px-4">
-        {alphabet.map((char) => (
-          <button
-            key={char}
-            onClick={(e) => { e.stopPropagation(); handleLetterClick(char); }}
-            className="bg-yellow-300 hover:bg-yellow-400 text-2xl font-bold py-3 px-4 rounded-xl shadow transition-transform active:scale-95 min-w-[52px] min-h-[52px]"
-          >
-            {char}
-          </button>
-        ))}
-      </div>
-    );
-  };
-
   if (isLoading || !currentQuestion) {
     return <div className="p-10 text-3xl text-center animate-bounce text-purple-700">🧠 載入拼字題中...</div>;
   }
 
   return (
     <div
-      className="min-h-screen bg-cover bg-center flex flex-col items-center justify-center p-4 font-sans text-shadow"
+      className="min-h-screen bg-cover bg-center flex flex-col items-center justify-center p-3 md:p-5 font-sans text-shadow"
       style={{ backgroundImage: "url('/images/bg-magic.jpg')" }}
     >
-      <div className="text-5xl font-extrabold text-purple-700 mb-4 animate-pulse tracking-wider drop-shadow-md">
-        🌟 RPG 單字冒險
-      </div>
-
-      <img
-        src="/images/hero.png"
-        alt="小魔法師"
-        className="w-36 h-36 mb-4 rounded-full ring-4 ring-purple-400 shadow-xl bg-white bg-opacity-90 p-1"
-      />
-
-      <div className="bg-white bg-opacity-90 px-6 py-4 rounded-2xl shadow-lg mb-6 w-full max-w-xs flex flex-col items-center gap-3">
-        <div className="flex gap-4 text-xl font-semibold text-gray-800">
-          <div>🧙‍♀️ 等級：<span className="text-blue-600">{level}</span></div>
-          <div>✨ 經驗值：<span className="text-yellow-600">{exp}</span></div>
+      <div className="w-full max-w-6xl grid gap-3 md:gap-4" style={{ gridTemplateRows: "auto auto auto 1fr" }}>
+        <div className="text-center text-3xl md:text-4xl font-extrabold text-purple-700 tracking-wider drop-shadow-md">
+          🏡 村莊單字練習
         </div>
-        <div className="w-full bg-red-200 rounded-full h-4 shadow-inner overflow-hidden">
-          <div className="bg-red-500 h-full transition-all duration-500" style={{ width: `${(hp / maxHp) * 100}%` }}></div>
+
+        <div className="grid grid-cols-[auto_1fr] gap-4 items-center bg-white/90 px-4 py-3 rounded-2xl shadow-lg">
+          <img
+            src="/images/hero.png"
+            alt="小魔法師"
+            className="w-20 h-20 md:w-24 md:h-24 rounded-full ring-4 ring-purple-400 bg-white p-1"
+          />
+          <div className="grid gap-2">
+            <div className="flex flex-wrap gap-x-5 gap-y-1 text-lg font-semibold text-gray-800">
+              <div>🧙‍♀️ 等級：<span className="text-blue-600">{level}</span></div>
+              <div>✨ 經驗值：<span className="text-yellow-600">{exp}</span></div>
+              <div>❤️ 血量：<span className="text-red-700">{hp} / {maxHp}</span></div>
+            </div>
+            <div className="w-full bg-red-200 rounded-full h-4 overflow-hidden">
+              <div className="bg-red-500 h-full transition-all duration-500" style={{ width: `${(hp / maxHp) * 100}%` }} />
+            </div>
+          </div>
         </div>
-        <div className="inline-block px-3 py-1 bg-white bg-opacity-80 rounded-full shadow text-red-700 font-bold text-sm tracking-wide border border-red-300">
-          ❤️ 血量：{hp} / {maxHp}
+
+        <div className="grid gap-2 text-center">
+          <div className="text-sm md:text-base italic text-gray-700">題型：{currentQuestion.direction}</div>
+          <div className="text-xl md:text-2xl font-extrabold text-blue-800 bg-white/90 px-6 py-2 rounded-xl drop-shadow">
+            請拼出：「{currentQuestion.questionText}」
+          </div>
+          <div>
+            <button
+              onClick={(event) => { event.stopPropagation(); speak(currentQuestion.questionText); }}
+              className="px-5 py-2 bg-blue-500 text-white text-base md:text-lg rounded-full shadow active:scale-95"
+            >
+              🔊 點我聽發音
+            </button>
+          </div>
         </div>
+
+        {!feedback ? (
+          <AnswerPad
+            input={input}
+            answerLength={currentQuestion.answer.length}
+            onLetter={handleLetterClick}
+            onBackspace={() => setInput((value) => value.slice(0, -1))}
+            onClear={() => setInput([])}
+            onSubmit={handleSubmit}
+          />
+        ) : (
+          <button
+            onClick={(event) => { event.stopPropagation(); handleNext(); }}
+            className="self-center justify-self-center text-2xl font-bold text-white bg-black/70 px-6 py-4 rounded-xl max-w-2xl min-h-[72px]"
+          >
+            {feedback}
+          </button>
+        )}
       </div>
-
-      <div className="text-lg italic text-gray-700 mb-1">題型：{currentQuestion.direction}</div>
-      <div className="text-2xl font-extrabold text-blue-800 bg-white bg-opacity-80 px-6 py-2 rounded-xl mb-3 drop-shadow">
-        請拼出：「{currentQuestion.questionText}」
-      </div>
-
-      <button
-        onClick={(e) => { e.stopPropagation(); speak(currentQuestion.questionText); }}
-        className="mb-5 px-6 py-2 bg-blue-500 text-white text-lg rounded-full shadow hover:bg-blue-600 transition"
-      >
-        🔊 點我聽發音
-      </button>
-
-      <div className="min-h-[48px] mb-4 text-3xl tracking-widest font-mono text-center text-gray-800 bg-white px-6 py-2 rounded-full shadow">
-        {input.join("") || "⋯"}
-      </div>
-
-      <div className="flex gap-3 mb-6">
-        <button onClick={(e) => { e.stopPropagation(); handleBackspace(); }} className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded shadow">
-          ⬅ 退格
-        </button>
-        <button onClick={(e) => { e.stopPropagation(); handleClear(); }} className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded shadow">
-          🔄 清除
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); handleSubmit(); }}
-          disabled={input.length !== currentQuestion.answer.length}
-          className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded shadow disabled:opacity-50"
-        >
-          ✅ 確認
-        </button>
-      </div>
-
-      {!feedback && renderAlphabetButtons()}
-
-      {feedback && (
-        <div className="mt-6 text-2xl font-bold text-center text-white bg-black bg-opacity-60 px-6 py-3 rounded-xl animate-bounce max-w-md">
-          {feedback}
-        </div>
-      )}
     </div>
   );
 }
