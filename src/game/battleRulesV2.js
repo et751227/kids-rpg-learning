@@ -7,7 +7,6 @@ export const MONSTER_TIERS = {
     icon: "👾",
     hpMultiplier: 1,
     attackMultiplier: 1,
-    rewardMultiplier: 1,
   },
   elite: {
     key: "elite",
@@ -15,7 +14,6 @@ export const MONSTER_TIERS = {
     icon: "👹",
     hpMultiplier: 1.5,
     attackMultiplier: 1.2,
-    rewardMultiplier: 1.5,
   },
   boss: {
     key: "boss",
@@ -23,7 +21,6 @@ export const MONSTER_TIERS = {
     icon: "🐉",
     hpMultiplier: 2.5,
     attackMultiplier: 1.5,
-    rewardMultiplier: 2.5,
   },
 };
 
