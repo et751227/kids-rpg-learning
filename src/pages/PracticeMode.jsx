@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import AnswerPad from "../components/AnswerPad";
 import LearningSessionGate from "../components/LearningSessionGate";
+import WorldBackButton from "../components/WorldBackButton";
 import { learningApi } from "../api/learningClient";
 
 const newId = () => {
@@ -18,6 +19,8 @@ const newId = () => {
 function PracticeContent() {
   const [input, setInput] = useState([]);
   const [feedback, setFeedback] = useState("");
+  const [outcome, setOutcome] = useState(null);
+  const [correctAnswer, setCorrectAnswer] = useState("");
   const [level, setLevel] = useState(1);
   const [question, setQuestion] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -26,6 +29,11 @@ function PracticeContent() {
   const attemptId = useRef(null);
   const sessionKey = useRef(`practice-${newId()}`);
 
+  const beginAttempt = () => {
+    attemptId.current = newId();
+    questionStartedAt.current = Date.now();
+  };
+
   const loadNewQuestion = async () => {
     setIsLoading(true);
     try {
@@ -33,9 +41,10 @@ function PracticeContent() {
       setQuestion(data.question);
       setInput([]);
       setFeedback("");
+      setOutcome(null);
+      setCorrectAnswer("");
       setAnswerLocked(false);
-      attemptId.current = newId();
-      questionStartedAt.current = Date.now();
+      beginAttempt();
     } finally {
       setIsLoading(false);
     }
@@ -52,12 +61,21 @@ function PracticeContent() {
       } catch (_) {
         if (active) {
           setFeedback("角色或題庫載入失敗，請稍後再試");
+          setOutcome("error");
           setIsLoading(false);
         }
       }
     })();
     return () => { active = false; };
   }, []);
+
+  const speak = (text, lang) => {
+    if (!text || typeof SpeechSynthesisUtterance === "undefined") return;
+    speechSynthesis.cancel();
+    const msg = new SpeechSynthesisUtterance(text);
+    msg.lang = lang;
+    speechSynthesis.speak(msg);
+  };
 
   const submit = async () => {
     if (answerLocked || !question || !input.length || !attemptId.current) return;
@@ -74,29 +92,36 @@ function PracticeContent() {
         metadata: { area: "village", learningFlow: "api-v1" },
       });
       const attempt = result.attempt || {};
-      setFeedback(attempt.correct
-        ? "🎉 答對了！"
-        : `❌ 再記一次：${attempt.correctAnswer || "請看正確答案"}`);
+      const answer = attempt.correctAnswer || "";
+      setCorrectAnswer(answer);
+
+      if (attempt.correct) {
+        setFeedback("🎉 答對了！");
+        setOutcome("correct");
+        return;
+      }
+
+      setFeedback("❌ 再試一次");
+      setOutcome("wrong");
+      setInput([]);
+      setAnswerLocked(false);
+      beginAttempt();
     } catch (_) {
       setFeedback("答案沒有成功儲存，請再按一次確認");
+      setOutcome("error");
       setAnswerLocked(false);
     }
   };
 
   const handleNext = async () => {
-    if (!feedback || !answerLocked) return;
+    if (outcome !== "correct" || !answerLocked) return;
     try {
       await loadNewQuestion();
     } catch (_) {
       setFeedback("下一題載入失敗，請再試一次");
+      setOutcome("error");
       setAnswerLocked(true);
     }
-  };
-
-  const speak = (text) => {
-    const msg = new SpeechSynthesisUtterance(text);
-    msg.lang = "zh-TW";
-    speechSynthesis.speak(msg);
   };
 
   if (isLoading && !question) {
@@ -109,8 +134,12 @@ function PracticeContent() {
       style={{ backgroundImage: "url('/images/bg-magic.jpg')" }}
     >
       <div className="w-full max-w-6xl grid gap-3 md:gap-4" style={{ gridTemplateRows: "auto auto auto 1fr" }}>
-        <div className="text-center text-3xl md:text-4xl font-extrabold text-purple-700 tracking-wider drop-shadow-md">
-          🏡 村莊單字練習
+        <div className="grid grid-cols-[auto_1fr_auto] gap-3 items-center">
+          <WorldBackButton />
+          <div className="text-center text-3xl md:text-4xl font-extrabold text-purple-700 tracking-wider drop-shadow-md">
+            🏡 村莊單字練習
+          </div>
+          <div className="min-w-[120px]" aria-hidden="true" />
         </div>
 
         <div className="grid grid-cols-[auto_1fr] gap-4 items-center bg-white/90 px-4 py-3 rounded-2xl shadow-lg">
@@ -121,7 +150,6 @@ function PracticeContent() {
           />
           <div className="text-lg font-semibold text-gray-800">
             🧙‍♀️ 等級：<span className="text-blue-600">{level}</span>
-            <span className="ml-4 text-sm text-gray-600">村莊會先練基礎與中等難度單字</span>
           </div>
         </div>
 
@@ -130,33 +158,54 @@ function PracticeContent() {
           <div className="text-xl md:text-2xl font-extrabold text-blue-800 bg-white/90 px-6 py-2 rounded-xl drop-shadow">
             請拼出：「{question?.chinese || "—"}」
           </div>
-          <div>
+          <div className="flex flex-wrap justify-center gap-2">
             <button
-              onClick={() => speak(question?.chinese || "")}
+              type="button"
+              onClick={() => speak(question?.chinese || "", "zh-TW")}
               className="px-5 py-2 bg-blue-500 text-white text-base md:text-lg rounded-full shadow active:scale-95"
             >
-              🔊 點我聽發音
+              🔊 再聽一次
             </button>
+            {correctAnswer ? (
+              <button
+                type="button"
+                onClick={() => speak(correctAnswer, "en-US")}
+                className="px-5 py-2 bg-indigo-600 text-white text-base md:text-lg rounded-full shadow active:scale-95"
+              >
+                🔊 聽英文
+              </button>
+            ) : null}
           </div>
         </div>
 
-        {!feedback ? (
-          <AnswerPad
-            input={input}
-            answerLength={question?.answerLength || 0}
-            onLetter={(char) => input.length < (question?.answerLength || 0) && setInput((value) => [...value, char])}
-            onBackspace={() => setInput((value) => value.slice(0, -1))}
-            onClear={() => setInput([])}
-            onSubmit={submit}
-          />
-        ) : (
-          <button
-            onClick={handleNext}
-            className="self-center justify-self-center text-2xl font-bold text-white bg-black/70 px-6 py-4 rounded-xl max-w-2xl min-h-[72px]"
-          >
-            {feedback}　點這裡下一題
-          </button>
-        )}
+        <div className="grid gap-3 min-h-0">
+          {feedback ? (
+            <div className={`self-center justify-self-center text-center text-xl md:text-2xl font-bold px-6 py-3 rounded-xl max-w-2xl min-h-[64px] ${outcome === "correct" ? "bg-green-700 text-white" : outcome === "wrong" ? "bg-amber-100 text-amber-900" : "bg-black/70 text-white"}`}>
+              <div>{feedback}</div>
+              {correctAnswer ? <div className="mt-1 text-lg">正確答案：{correctAnswer}</div> : null}
+            </div>
+          ) : null}
+
+          {outcome === "correct" ? (
+            <button
+              type="button"
+              onClick={handleNext}
+              className="self-center justify-self-center text-xl md:text-2xl font-bold text-white bg-purple-700 px-6 py-4 rounded-xl min-h-[64px] min-w-[220px] active:scale-95"
+            >
+              下一題 ➜
+            </button>
+          ) : (
+            <AnswerPad
+              input={input}
+              answerLength={question?.answerLength || 0}
+              disabled={answerLocked || !question}
+              onLetter={(char) => input.length < (question?.answerLength || 0) && setInput((value) => [...value, char])}
+              onBackspace={() => setInput((value) => value.slice(0, -1))}
+              onClear={() => setInput([])}
+              onSubmit={submit}
+            />
+          )}
+        </div>
       </div>
     </div>
   );
