@@ -1,5 +1,40 @@
 export const BASE_STATS = { strength: 1, vitality: 1, agility: 1 };
 
+export const MONSTER_TIERS = {
+  normal: {
+    key: "normal",
+    label: "一般怪",
+    icon: "👾",
+    hpMultiplier: 1,
+    attackMultiplier: 1,
+  },
+  elite: {
+    key: "elite",
+    label: "菁英怪",
+    icon: "👹",
+    hpMultiplier: 1.5,
+    attackMultiplier: 1.2,
+  },
+  boss: {
+    key: "boss",
+    label: "BOSS",
+    icon: "🐉",
+    hpMultiplier: 2.5,
+    attackMultiplier: 1.5,
+  },
+};
+
+export function monsterTierForRoll(roll) {
+  const value = Math.min(0.999999, Math.max(0, Number(roll) || 0));
+  if (value < 0.8) return MONSTER_TIERS.normal;
+  if (value < 0.97) return MONSTER_TIERS.elite;
+  return MONSTER_TIERS.boss;
+}
+
+export function randomMonsterTier(random = Math.random) {
+  return monsterTierForRoll(random());
+}
+
 export function availableStatPoints(level) {
   return Math.max(0, Number(level || 1) - 1);
 }
@@ -19,12 +54,14 @@ export function playerMaxHp(level, vitality) {
   return Math.round(50 + Number(level || 1) * 3 + Number(vitality || 1) * 6);
 }
 
-export function monsterMaxHp(level) {
-  return Math.round(55 + Number(level || 1) * 5);
+export function monsterMaxHp(level, tier = MONSTER_TIERS.normal) {
+  const base = 55 + Number(level || 1) * 5;
+  return Math.max(1, Math.round(base * Number(tier?.hpMultiplier || 1)));
 }
 
-export function monsterDamage(level) {
-  return Math.max(1, Math.round(4 + Number(level || 1) * 0.6));
+export function monsterDamage(level, tier = MONSTER_TIERS.normal) {
+  const base = 4 + Number(level || 1) * 0.6;
+  return Math.max(1, Math.round(base * Number(tier?.attackMultiplier || 1)));
 }
 
 export function timingThresholds(agility) {
