@@ -1,42 +1,96 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AnswerPad from "../components/AnswerPad";
+import LearningSessionGate from "../components/LearningSessionGate";
+import { learningApi } from "../api/learningClient";
 
-export default function RPGWordGameMain() {
+const newId = () => {
+  const cryptoApi = globalThis.crypto;
+  if (cryptoApi?.randomUUID) return cryptoApi.randomUUID();
+  if (!cryptoApi?.getRandomValues) throw new Error("secure_crypto_unavailable");
+  const bytes = new Uint8Array(16);
+  cryptoApi.getRandomValues(bytes);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+};
+
+function PracticeContent() {
   const [input, setInput] = useState([]);
   const [feedback, setFeedback] = useState("");
-  const [exp, setExp] = useState(() => parseInt(localStorage.getItem("exp")) || 0);
-  const [level, setLevel] = useState(() => parseInt(localStorage.getItem("level")) || 1);
-  const [maxHp, setMaxHp] = useState(50);
-  const [hp, setHp] = useState(50);
-  const [currentQuestion, setCurrentQuestion] = useState(null);
+  const [level, setLevel] = useState(1);
+  const [question, setQuestion] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [answerLocked, setAnswerLocked] = useState(false);
+  const questionStartedAt = useRef(Date.now());
+  const attemptId = useRef(null);
+  const sessionKey = useRef(`practice-${newId()}`);
+
+  const loadNewQuestion = async () => {
+    setIsLoading(true);
+    try {
+      const data = await learningApi.nextQuestion("practice");
+      setQuestion(data.question);
+      setInput([]);
+      setFeedback("");
+      setAnswerLocked(false);
+      attemptId.current = newId();
+      questionStartedAt.current = Date.now();
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    loadNewQuestion();
+    let active = true;
+    (async () => {
+      try {
+        const progress = await learningApi.progress();
+        if (!active) return;
+        setLevel(Number(progress.level || 1));
+        await loadNewQuestion();
+      } catch (_) {
+        if (active) {
+          setFeedback("角色或題庫載入失敗，請稍後再試");
+          setIsLoading(false);
+        }
+      }
+    })();
+    return () => { active = false; };
   }, []);
 
-  useEffect(() => {
-    const clickHandler = () => {
-      if (feedback) handleNext();
-    };
-    window.addEventListener("click", clickHandler);
-    return () => window.removeEventListener("click", clickHandler);
-  }, [feedback]);
-
-  const loadNewQuestion = () => {
-    setIsLoading(true);
-    fetch("https://script.google.com/macros/s/AKfycbwjSr6rDRrqo5xq1ztDsRVDORoBWLGZwwtHSSHKkYLUykjNdao9Va-YN3eg02HTWYMh/exec?type=main")
-      .then((res) => res.json())
-      .then((data) => {
-        const clean = data.filter((item) => item.chinese && item.english);
-        const random = clean[Math.floor(Math.random() * clean.length)];
-        setCurrentQuestion({
-          questionText: random.chinese,
-          answer: random.english,
-          direction: "中 ➜ 英",
-        });
-        setIsLoading(false);
+  const submit = async () => {
+    if (answerLocked || !question || !input.length || !attemptId.current) return;
+    setAnswerLocked(true);
+    const responseTimeMs = Date.now() - questionStartedAt.current;
+    try {
+      const result = await learningApi.submitAttempt({
+        attemptId: attemptId.current,
+        vocabularyId: question.vocabularyId,
+        sessionKey: sessionKey.current,
+        mode: "practice",
+        submittedAnswer: input.join(""),
+        responseTimeMs,
+        metadata: { area: "village", learningFlow: "api-v1" },
       });
+      const attempt = result.attempt || {};
+      setFeedback(attempt.correct
+        ? "🎉 答對了！"
+        : `❌ 再記一次：${attempt.correctAnswer || "請看正確答案"}`);
+    } catch (_) {
+      setFeedback("答案沒有成功儲存，請再按一次確認");
+      setAnswerLocked(false);
+    }
+  };
+
+  const handleNext = async () => {
+    if (!feedback || !answerLocked) return;
+    try {
+      await loadNewQuestion();
+    } catch (_) {
+      setFeedback("下一題載入失敗，請再試一次");
+      setAnswerLocked(true);
+    }
   };
 
   const speak = (text) => {
@@ -45,44 +99,7 @@ export default function RPGWordGameMain() {
     speechSynthesis.speak(msg);
   };
 
-  const handleLetterClick = (char) => {
-    if (input.length < (currentQuestion?.answer?.length || 0)) {
-      setInput((value) => [...value, char]);
-    }
-  };
-
-  const handleSubmit = () => {
-    const joined = input.join("").toLowerCase();
-    const correct = currentQuestion.answer.toLowerCase();
-
-    if (joined === correct) {
-      const newExp = exp + 10;
-      const newLevel = Math.floor(newExp / 50) + 1;
-      if (newLevel > level) {
-        const newMaxHp = 50 + (newLevel - 1) * 10;
-        setLevel(newLevel);
-        setMaxHp(newMaxHp);
-        setHp(newMaxHp);
-      } else {
-        setHp(Math.min(hp + 10, maxHp));
-      }
-      setExp(newExp);
-      localStorage.setItem("exp", newExp);
-      localStorage.setItem("level", newLevel);
-      setFeedback("🎉 答對了！點擊任意處繼續...");
-    } else {
-      setHp(Math.max(hp - 10, 0));
-      setFeedback(`❌ 錯了！正確是 ${correct}，點擊任意處繼續...`);
-    }
-  };
-
-  const handleNext = () => {
-    setFeedback("");
-    setInput([]);
-    loadNewQuestion();
-  };
-
-  if (isLoading || !currentQuestion) {
+  if (isLoading && !question) {
     return <div className="p-10 text-3xl text-center animate-bounce text-purple-700">🧠 載入拼字題中...</div>;
   }
 
@@ -102,26 +119,20 @@ export default function RPGWordGameMain() {
             alt="小魔法師"
             className="w-20 h-20 md:w-24 md:h-24 rounded-full ring-4 ring-purple-400 bg-white p-1"
           />
-          <div className="grid gap-2">
-            <div className="flex flex-wrap gap-x-5 gap-y-1 text-lg font-semibold text-gray-800">
-              <div>🧙‍♀️ 等級：<span className="text-blue-600">{level}</span></div>
-              <div>✨ 經驗值：<span className="text-yellow-600">{exp}</span></div>
-              <div>❤️ 血量：<span className="text-red-700">{hp} / {maxHp}</span></div>
-            </div>
-            <div className="w-full bg-red-200 rounded-full h-4 overflow-hidden">
-              <div className="bg-red-500 h-full transition-all duration-500" style={{ width: `${(hp / maxHp) * 100}%` }} />
-            </div>
+          <div className="text-lg font-semibold text-gray-800">
+            🧙‍♀️ 等級：<span className="text-blue-600">{level}</span>
+            <span className="ml-4 text-sm text-gray-600">村莊會先練基礎與中等難度單字</span>
           </div>
         </div>
 
         <div className="grid gap-2 text-center">
-          <div className="text-sm md:text-base italic text-gray-700">題型：{currentQuestion.direction}</div>
+          <div className="text-sm md:text-base italic text-gray-700">題型：中 ➜ 英</div>
           <div className="text-xl md:text-2xl font-extrabold text-blue-800 bg-white/90 px-6 py-2 rounded-xl drop-shadow">
-            請拼出：「{currentQuestion.questionText}」
+            請拼出：「{question?.chinese || "—"}」
           </div>
           <div>
             <button
-              onClick={(event) => { event.stopPropagation(); speak(currentQuestion.questionText); }}
+              onClick={() => speak(question?.chinese || "")}
               className="px-5 py-2 bg-blue-500 text-white text-base md:text-lg rounded-full shadow active:scale-95"
             >
               🔊 點我聽發音
@@ -132,21 +143,25 @@ export default function RPGWordGameMain() {
         {!feedback ? (
           <AnswerPad
             input={input}
-            answerLength={currentQuestion.answer.length}
-            onLetter={handleLetterClick}
+            answerLength={question?.answerLength || 0}
+            onLetter={(char) => input.length < (question?.answerLength || 0) && setInput((value) => [...value, char])}
             onBackspace={() => setInput((value) => value.slice(0, -1))}
             onClear={() => setInput([])}
-            onSubmit={handleSubmit}
+            onSubmit={submit}
           />
         ) : (
           <button
-            onClick={(event) => { event.stopPropagation(); handleNext(); }}
+            onClick={handleNext}
             className="self-center justify-self-center text-2xl font-bold text-white bg-black/70 px-6 py-4 rounded-xl max-w-2xl min-h-[72px]"
           >
-            {feedback}
+            {feedback}　點這裡下一題
           </button>
         )}
       </div>
     </div>
   );
+}
+
+export default function PracticeMode() {
+  return <LearningSessionGate><PracticeContent /></LearningSessionGate>;
 }
