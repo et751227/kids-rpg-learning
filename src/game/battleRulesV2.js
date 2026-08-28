@@ -64,13 +64,37 @@ export function monsterDamage(level, tier = MONSTER_TIERS.normal) {
   return Math.max(1, Math.round(base * Number(tier?.attackMultiplier || 1)));
 }
 
+export function baseAttack(level, strength) {
+  return 8 + Math.max(1, Number(level || 1)) * 0.45 + Math.max(1, Number(strength || 1)) * 1.2;
+}
+
 export function damageReduction(vitality) {
   const vit = Math.max(1, Number(vitality || 1));
   return 0.35 * Math.max(0, vit - 1) / (vit + 9);
 }
 
-export function receivedMonsterDamage(level, vitality, tier = MONSTER_TIERS.normal, correct = false) {
-  if (correct) return 0;
+export function evadeChance(agility) {
+  const agi = Math.max(1, Number(agility || 1));
+  return 0.35 * Math.max(0, agi - 1) / (agi + 9);
+}
+
+export function deterministicEvadeRoll(sessionKey, attemptId) {
+  const input = `kids-battle-evade-v1:${sessionKey}:${attemptId}`;
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < input.length; i += 1) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash / 0x100000000;
+}
+
+export function didEvade(sessionKey, attemptId, agility, correct) {
+  if (correct) return false;
+  return deterministicEvadeRoll(sessionKey, attemptId) < evadeChance(agility);
+}
+
+export function receivedMonsterDamage(level, vitality, tier = MONSTER_TIERS.normal, correct = false, evaded = false) {
+  if (correct || evaded) return 0;
   return Math.max(1, Math.round(monsterDamage(level, tier) * (1 - damageReduction(vitality))));
 }
 
@@ -82,10 +106,9 @@ export function timingThresholds(agility) {
   };
 }
 
-export function attackResult({ strength, agility, responseTimeMs, correct }) {
+export function attackResult({ level, strength, agility, responseTimeMs, correct }) {
   if (!correct) return { damage: 0, grade: "miss", multiplier: 0 };
 
-  const baseDamage = 8 + Math.max(1, Number(strength || 1)) * 1.5;
   const { fastMs, normalMs } = timingThresholds(agility);
 
   let grade = "slow";
@@ -98,5 +121,5 @@ export function attackResult({ strength, agility, responseTimeMs, correct }) {
     multiplier = 1;
   }
 
-  return { damage: Math.max(1, Math.round(baseDamage * multiplier)), grade, multiplier };
+  return { damage: Math.max(1, Math.round(baseAttack(level, strength) * multiplier)), grade, multiplier };
 }

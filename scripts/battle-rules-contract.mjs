@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import {
   MONSTER_TIERS,
+  attackResult,
+  baseAttack,
   damageReduction,
+  deterministicEvadeRoll,
+  didEvade,
+  evadeChance,
   monsterDamage,
   monsterMaxHp,
   monsterTierForRoll,
@@ -34,6 +39,11 @@ const eliteDamage = monsterDamage(level, MONSTER_TIERS.elite);
 const bossDamage = monsterDamage(level, MONSTER_TIERS.boss);
 assert.ok(normalDamage < eliteDamage && eliteDamage < bossDamage);
 
+assert.equal(baseAttack(10, 1), 13.7);
+const lv10Fast = attackResult({ level: 10, strength: 1, agility: 1, responseTimeMs: 1000, correct: true });
+const lv20Fast = attackResult({ level: 20, strength: 1, agility: 1, responseTimeMs: 1000, correct: true });
+assert.ok(lv20Fast.damage > lv10Fast.damage, "level must contribute offense");
+
 assert.equal(receivedMonsterDamage(level, 1, MONSTER_TIERS.normal, true), 0, "correct answer must prevent attack");
 assert.ok(receivedMonsterDamage(level, 20, MONSTER_TIERS.normal, false) < normalDamage, "VIT must mitigate wrong-answer damage");
 assert.ok(damageReduction(20) > damageReduction(10));
@@ -45,5 +55,15 @@ assert.equal(agi1.fastMs, 5000);
 assert.equal(agi1.normalMs, 10000);
 assert.ok(agi30.fastMs < 7500);
 assert.ok(agi30.normalMs < 14000);
+assert.equal(evadeChance(1), 0);
+assert.ok(evadeChance(20) > evadeChance(10));
+assert.ok(evadeChance(30) < 0.3);
+
+const sessionKey = "battle-v2-00000000-0000-4000-8000-000000000001";
+const attemptId = "attempt-001";
+assert.equal(deterministicEvadeRoll(sessionKey, attemptId), deterministicEvadeRoll(sessionKey, attemptId));
+assert.equal(didEvade(sessionKey, attemptId, 1, false), false);
+assert.equal(didEvade(sessionKey, attemptId, 30, true), false);
+assert.equal(receivedMonsterDamage(level, 1, MONSTER_TIERS.normal, false, true), 0, "evade must prevent wrong-answer damage");
 
 console.log("battle_rules_contract=PASS");
