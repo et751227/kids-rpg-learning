@@ -6,6 +6,7 @@ import WorldBackButton from "../components/WorldBackButton";
 import { learningApi } from "../api/learningClient";
 import {
   attackResult,
+  didEvade,
   monsterMaxHp,
   playerMaxHp,
   randomMonsterTier,
@@ -26,21 +27,9 @@ const newId = () => {
 };
 
 const monsterVisualClasses = {
-  normal: {
-    card: "border-slate-500 bg-slate-900/80",
-    icon: "text-5xl md:text-6xl",
-    hp: "bg-red-500",
-  },
-  elite: {
-    card: "border-amber-300 bg-amber-950/40 shadow-lg shadow-amber-500/30",
-    icon: "text-6xl md:text-7xl",
-    hp: "bg-amber-500",
-  },
-  boss: {
-    card: "border-fuchsia-300 bg-fuchsia-950/40 shadow-xl shadow-fuchsia-500/40",
-    icon: "text-7xl md:text-8xl animate-pulse",
-    hp: "bg-fuchsia-500",
-  },
+  normal: { card: "border-slate-500 bg-slate-900/80", icon: "text-5xl md:text-6xl", hp: "bg-red-500" },
+  elite: { card: "border-amber-300 bg-amber-950/40 shadow-lg shadow-amber-500/30", icon: "text-6xl md:text-7xl", hp: "bg-amber-500" },
+  boss: { card: "border-fuchsia-300 bg-fuchsia-950/40 shadow-xl shadow-fuchsia-500/40", icon: "text-7xl md:text-8xl animate-pulse", hp: "bg-fuchsia-500" },
 };
 
 function ChallengeContent() {
@@ -158,7 +147,7 @@ function ChallengeContent() {
       });
       const attempt = result.attempt || {};
       const correct = Boolean(attempt.correct);
-      const attack = attackResult({ strength: stats.strength, agility: stats.agility, responseTimeMs, correct });
+      const attack = attackResult({ level, strength: stats.strength, agility: stats.agility, responseTimeMs, correct });
       const nextMonsterHp = Math.max(0, monsterHp - attack.damage);
       const nextRound = rounds + 1;
       setMonsterHp(nextMonsterHp);
@@ -170,7 +159,8 @@ function ChallengeContent() {
         return;
       }
 
-      const received = receivedMonsterDamage(level, stats.vitality, monsterTier, correct);
+      const evaded = didEvade(sessionKey.current, currentAttemptId, stats.agility, correct);
+      const received = receivedMonsterDamage(level, stats.vitality, monsterTier, correct, evaded);
       const nextPlayerHp = Math.max(0, playerHp - received);
       setPlayerHp(nextPlayerHp);
       if (received > 0) flashPlayerHit();
@@ -182,7 +172,9 @@ function ChallengeContent() {
       const gradeText = attack.grade === "fast" ? "快速重擊" : attack.grade === "normal" ? "普通攻擊" : attack.grade === "slow" ? "慢速攻擊" : "沒有命中";
       setFeedback(correct
         ? `✅ ${gradeText}：${attack.damage} 傷害；答對成功阻止怪物攻擊！`
-        : `❌ 答錯，正確是 ${attempt.correctAnswer || "請看下一題再試"}；受到 ${received} 傷害。`);
+        : evaded
+          ? `❌ 答錯，正確是 ${attempt.correctAnswer || "請看下一題再試"}；⚡ 敏捷閃避成功，沒有受到傷害！`
+          : `❌ 答錯，正確是 ${attempt.correctAnswer || "請看下一題再試"}；受到 ${received} 傷害。`);
       window.setTimeout(() => {
         loadQuestion().catch(() => {
           setFeedback("下一題載入失敗，請稍後再試");
