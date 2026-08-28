@@ -30,6 +30,10 @@ export const learningApi = {
       method: "POST",
       body: JSON.stringify({ attemptId, vocabularyId, sessionKey, mode, submittedAnswer, responseTimeMs, metadata }),
     }),
+  completeBattle: (sessionKey) => jsonRequest("/api/learning/battle-result", {
+    method: "POST",
+    body: JSON.stringify({ sessionKey }),
+  }),
   vocabularyList: ({ adminKey, search = "", includeDisabled = true }) =>
     jsonRequest(`/api/learning/vocabulary?search=${encodeURIComponent(search)}&includeDisabled=${includeDisabled ? "true" : "false"}`, {
       headers: adminHeaders(adminKey),

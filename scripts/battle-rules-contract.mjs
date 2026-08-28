@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import {
   MONSTER_TIERS,
+  damageReduction,
   monsterDamage,
   monsterMaxHp,
   monsterTierForRoll,
+  receivedMonsterDamage,
+  timingThresholds,
 } from "../src/game/battleRulesV2.js";
 
 assert.equal(monsterTierForRoll(0).key, "normal");
@@ -30,5 +33,17 @@ const normalDamage = monsterDamage(level, MONSTER_TIERS.normal);
 const eliteDamage = monsterDamage(level, MONSTER_TIERS.elite);
 const bossDamage = monsterDamage(level, MONSTER_TIERS.boss);
 assert.ok(normalDamage < eliteDamage && eliteDamage < bossDamage);
+
+assert.equal(receivedMonsterDamage(level, 1, MONSTER_TIERS.normal, true), 0, "correct answer must prevent attack");
+assert.ok(receivedMonsterDamage(level, 20, MONSTER_TIERS.normal, false) < normalDamage, "VIT must mitigate wrong-answer damage");
+assert.ok(damageReduction(20) > damageReduction(10));
+assert.ok(damageReduction(30) < 0.3);
+
+const agi1 = timingThresholds(1);
+const agi30 = timingThresholds(30);
+assert.equal(agi1.fastMs, 5000);
+assert.equal(agi1.normalMs, 10000);
+assert.ok(agi30.fastMs < 7500);
+assert.ok(agi30.normalMs < 14000);
 
 console.log("battle_rules_contract=PASS");

@@ -6,10 +6,10 @@ import WorldBackButton from "../components/WorldBackButton";
 import { learningApi } from "../api/learningClient";
 import {
   attackResult,
-  monsterDamage,
   monsterMaxHp,
   playerMaxHp,
   randomMonsterTier,
+  receivedMonsterDamage,
   timingThresholds,
 } from "../game/battleRulesV2";
 
@@ -58,6 +58,9 @@ function ChallengeContent() {
   const [rounds, setRounds] = useState(0);
   const [monsterHit, setMonsterHit] = useState(false);
   const [playerHit, setPlayerHit] = useState(false);
+  const [battleResult, setBattleResult] = useState(null);
+  const [settlementSaving, setSettlementSaving] = useState(false);
+  const [settlementError, setSettlementError] = useState(false);
   const questionStartedAt = useRef(Date.now());
   const sessionKey = useRef(`battle-v2-${newId()}`);
   const attemptId = useRef(null);
@@ -84,6 +87,28 @@ function ChallengeContent() {
     setAnswerLocked(false);
     attemptId.current = newId();
     questionStartedAt.current = Date.now();
+  };
+
+  const finalizeBattle = async (leadText = "戰鬥完成！") => {
+    if (settlementSaving) return;
+    setSettlementSaving(true);
+    setSettlementError(false);
+    try {
+      const result = await learningApi.completeBattle(sessionKey.current);
+      const battle = result?.battle;
+      if (!battle?.exp || !battle?.level) throw new Error("invalid_battle_result");
+      setBattleResult(battle);
+      setLevel(Number(battle.level.after || level));
+      const levelText = Number(battle.level.gained || 0) > 0
+        ? ` ✨ 升到 Lv.${battle.level.after}，獲得 ${battle.level.statPointsGained} 點屬性點！`
+        : "";
+      setFeedback(`${leadText} +${battle.exp.earned} EXP。${levelText}`);
+    } catch (_) {
+      setSettlementError(true);
+      setFeedback("戰鬥已結束，但成長結算尚未成功。請按「重試結算」，不會重複計算 EXP。");
+    } finally {
+      setSettlementSaving(false);
+    }
   };
 
   useEffect(() => {
@@ -141,27 +166,26 @@ function ChallengeContent() {
       if (attack.damage > 0) flashMonsterHit();
 
       if (nextMonsterHp <= 0) {
-        setFeedback(`🏆 擊敗${monsterTier.label}！第 ${nextRound} 題完成最後一擊，造成 ${attack.damage} 傷害。`);
+        await finalizeBattle(`🏆 擊敗${monsterTier.label}！第 ${nextRound} 題完成最後一擊。`);
         return;
       }
 
-      const incoming = monsterDamage(level, monsterTier);
-      const received = correct ? Math.max(1, Math.floor(incoming / 2)) : incoming;
+      const received = receivedMonsterDamage(level, stats.vitality, monsterTier, correct);
       const nextPlayerHp = Math.max(0, playerHp - received);
       setPlayerHp(nextPlayerHp);
-      flashPlayerHit();
+      if (received > 0) flashPlayerHit();
       if (nextPlayerHp <= 0) {
-        setFeedback(`💥 被${monsterTier.label}擊敗。這場共回答 ${nextRound} 題。`);
+        await finalizeBattle(`💥 被${monsterTier.label}擊敗。這場共回答 ${nextRound} 題。`);
         return;
       }
 
       const gradeText = attack.grade === "fast" ? "快速重擊" : attack.grade === "normal" ? "普通攻擊" : attack.grade === "slow" ? "慢速攻擊" : "沒有命中";
       setFeedback(correct
-        ? `✅ ${gradeText}：${attack.damage} 傷害；格擋後受到 ${received} 傷害。`
+        ? `✅ ${gradeText}：${attack.damage} 傷害；答對成功阻止怪物攻擊！`
         : `❌ 答錯，正確是 ${attempt.correctAnswer || "請看下一題再試"}；受到 ${received} 傷害。`);
       window.setTimeout(() => {
         loadQuestion().catch(() => {
-          setFeedback("下一題載入失敗，請按再打一場重試");
+          setFeedback("下一題載入失敗，請稍後再試");
           setAnswerLocked(false);
         });
       }, 2000);
@@ -176,9 +200,11 @@ function ChallengeContent() {
     sessionKey.current = `battle-v2-${newId()}`;
     attemptId.current = null;
     setMonsterTier(nextTier);
-    setPlayerHp(maxPlayerHp);
+    setPlayerHp(playerMaxHp(level, stats.vitality));
     setMonsterHp(monsterMaxHp(level, nextTier));
     setRounds(0);
+    setBattleResult(null);
+    setSettlementError(false);
     setFeedback(`${nextTier.icon} 遭遇${nextTier.label}！`);
     setAnswerLocked(true);
     try { await loadQuestion(); }
@@ -190,6 +216,7 @@ function ChallengeContent() {
   }
 
   const controlsDisabled = answerLocked || !question || playerHp <= 0 || monsterHp <= 0;
+  const battleEnded = playerHp <= 0 || monsterHp <= 0;
   return (
     <div className="min-h-screen bg-slate-950 text-white p-3 md:p-5 flex items-center justify-center">
       <div className="w-full max-w-6xl grid gap-3 md:gap-4">
@@ -208,7 +235,7 @@ function ChallengeContent() {
               <div className="text-4xl md:text-5xl">🧙‍♀️</div>
               <div className="flex-1">
                 <div className="flex justify-between text-sm mb-1"><span>玩家</span><span>{playerHp}/{maxPlayerHp}</span></div>
-                <div className="h-5 bg-slate-700 rounded-full overflow-hidden"><div className="h-full bg-green-500 transition-all" style={{ width: `${(playerHp / maxPlayerHp) * 100}%` }} /></div>
+                <div className="h-5 bg-slate-700 rounded-full overflow-hidden"><div className="h-full bg-green-500 transition-all" style={{ width: `${Math.min(100, (playerHp / maxPlayerHp) * 100)}%` }} /></div>
               </div>
             </div>
           </div>
@@ -218,13 +245,22 @@ function ChallengeContent() {
               <div className={`${monsterVisual.icon} transition-transform duration-300 ${monsterHit ? "scale-75 rotate-6" : "scale-100"}`} aria-label={monsterTier.label}>{monsterTier.icon}</div>
               <div className="flex-1">
                 <div className="flex justify-between text-sm mb-1"><span>{monsterTier.label}</span><span>{monsterHp}/{maxMonsterHp}</span></div>
-                <div className="h-6 bg-slate-800 rounded-full overflow-hidden border border-white/20"><div className={`h-full transition-all ${monsterVisual.hp}`} style={{ width: `${(monsterHp / maxMonsterHp) * 100}%` }} /></div>
+                <div className="h-6 bg-slate-800 rounded-full overflow-hidden border border-white/20"><div className={`h-full transition-all ${monsterVisual.hp}`} style={{ width: `${Math.min(100, (monsterHp / maxMonsterHp) * 100)}%` }} /></div>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="rounded-xl bg-black/50 p-3 text-center font-bold min-h-[52px]">{feedback}</div>
+        <div className="rounded-xl bg-black/50 p-3 text-center font-bold min-h-[52px]">{settlementSaving ? "正在結算這場學習成果…" : feedback}</div>
+
+        {battleResult && (
+          <div className="rounded-xl border border-emerald-400/50 bg-emerald-950/40 p-3 text-center">
+            <span className="font-bold">本場 +{battleResult.exp.earned} EXP</span>
+            <span className="mx-2">·</span>
+            <span>{battleResult.correctCount}/{battleResult.questionCount} 題答對</span>
+            {battleResult.level.gained > 0 && <span className="ml-2 font-bold text-amber-200">· Lv.{battleResult.level.before} → Lv.{battleResult.level.after}，+{battleResult.level.statPointsGained} 屬性點</span>}
+          </div>
+        )}
 
         <div className="grid gap-3 min-h-0">
           <div className="text-center text-xl md:text-2xl font-extrabold bg-white text-blue-900 rounded-xl py-2 px-3">請拼出：「{question?.chinese || "—"}」</div>
@@ -238,7 +274,15 @@ function ChallengeContent() {
             onClear={() => setInput([])}
             onSubmit={submit}
           />
-          <button onClick={restart} className="justify-self-end rounded-xl bg-indigo-600 text-lg font-bold min-h-[48px] px-5 py-2">再打一場</button>
+          {battleEnded && (
+            <button
+              onClick={() => settlementError ? finalizeBattle() : restart()}
+              disabled={settlementSaving || (!battleResult && !settlementError)}
+              className="justify-self-end rounded-xl bg-indigo-600 text-lg font-bold min-h-[52px] px-6 py-2 disabled:opacity-40"
+            >
+              {settlementSaving ? "結算中…" : settlementError ? "重試結算" : "再打一場"}
+            </button>
+          )}
         </div>
       </div>
     </div>
