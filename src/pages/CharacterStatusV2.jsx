@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import LearningSessionGate from "../components/LearningSessionGate";
 import { learningApi } from "../api/learningClient";
-import { BASE_STATS, playerMaxHp, remainingStatPoints, timingThresholds } from "../game/battleRulesV2";
+import { BASE_STATS, baseAttack, playerMaxHp, remainingStatPoints, timingThresholds } from "../game/battleRulesV2";
 
 function CharacterStatusContent() {
   const navigate = useNavigate();
@@ -35,7 +35,7 @@ function CharacterStatusContent() {
       hp: playerMaxHp(level, stats.vitality),
       fastSeconds: (thresholds.fastMs / 1000).toFixed(1),
       normalSeconds: (thresholds.normalMs / 1000).toFixed(1),
-      baseAttack: Math.round(8 + stats.strength * 1.5),
+      baseAttack: Math.round(baseAttack(level, stats.strength)),
     };
   }, [level, stats]);
 
@@ -45,6 +45,21 @@ function CharacterStatusContent() {
       if (delta < 0 && current[key] <= 1) return current;
       return { ...current, [key]: current[key] + delta };
     });
+  };
+
+  const resetStats = async () => {
+    if (!window.confirm("要重置全部屬性嗎？已使用的點數會全部退回，等級與 EXP 不會改變。")) return;
+    setSaving(true);
+    setMessage("");
+    try {
+      const saved = await learningApi.saveStats({ ...BASE_STATS });
+      setStats(saved.stats || { ...BASE_STATS });
+      setMessage("屬性已重置，點數已全部退回");
+    } catch (_) {
+      setMessage("屬性重置失敗，請再試一次");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const saveAndBattle = async () => {
@@ -65,8 +80,8 @@ function CharacterStatusContent() {
 
   const cards = [
     { key: "strength", label: "力量", icon: "⚔️", help: "提高每次答對時造成的傷害" },
-    { key: "vitality", label: "體力", icon: "❤️", help: "提高戰鬥中的最大血量" },
-    { key: "agility", label: "敏捷", icon: "⚡", help: "放寬快速與普通攻擊的時間門檻" },
+    { key: "vitality", label: "體力", icon: "❤️", help: "提高戰鬥中的最大血量與減傷" },
+    { key: "agility", label: "敏捷", icon: "⚡", help: "放寬攻擊時間門檻，答錯時也有機會閃避" },
   ];
 
   return (
@@ -86,9 +101,9 @@ function CharacterStatusContent() {
               <div className="text-2xl font-bold mb-2">{item.icon} {item.label}</div>
               <div className="text-slate-300 min-h-[48px] mb-4">{item.help}</div>
               <div className="flex items-center justify-center gap-4">
-                <button onClick={() => changeStat(item.key, -1)} disabled={stats[item.key] <= 1} className="w-12 h-12 text-2xl rounded-full bg-slate-600 disabled:opacity-40">−</button>
+                <button onClick={() => changeStat(item.key, -1)} disabled={stats[item.key] <= 1 || saving} className="w-12 h-12 text-2xl rounded-full bg-slate-600 disabled:opacity-40">−</button>
                 <div className="text-4xl font-extrabold min-w-[56px] text-center">{stats[item.key]}</div>
-                <button onClick={() => changeStat(item.key, 1)} disabled={remaining <= 0} className="w-12 h-12 text-2xl rounded-full bg-indigo-600 disabled:opacity-40">＋</button>
+                <button onClick={() => changeStat(item.key, 1)} disabled={remaining <= 0 || saving} className="w-12 h-12 text-2xl rounded-full bg-indigo-600 disabled:opacity-40">＋</button>
               </div>
             </div>
           ))}
@@ -104,7 +119,10 @@ function CharacterStatusContent() {
         </div>
 
         {message && <div className="text-center text-amber-300 mb-4">{message}</div>}
-        <div className="flex justify-center">
+        <div className="flex flex-wrap justify-center gap-3">
+          <button onClick={resetStats} disabled={saving} className="px-6 py-3 rounded-xl bg-slate-600 text-lg font-bold disabled:opacity-40">
+            ♻️ 重置屬性
+          </button>
           <button onClick={saveAndBattle} disabled={saving} className="px-8 py-3 rounded-xl bg-green-600 text-lg font-bold disabled:opacity-40">
             {saving ? "儲存中…" : "儲存能力並去打怪"}
           </button>
