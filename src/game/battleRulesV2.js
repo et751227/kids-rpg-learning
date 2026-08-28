@@ -64,11 +64,21 @@ export function monsterDamage(level, tier = MONSTER_TIERS.normal) {
   return Math.max(1, Math.round(base * Number(tier?.attackMultiplier || 1)));
 }
 
+export function damageReduction(vitality) {
+  const vit = Math.max(1, Number(vitality || 1));
+  return 0.35 * Math.max(0, vit - 1) / (vit + 9);
+}
+
+export function receivedMonsterDamage(level, vitality, tier = MONSTER_TIERS.normal, correct = false) {
+  if (correct) return 0;
+  return Math.max(1, Math.round(monsterDamage(level, tier) * (1 - damageReduction(vitality))));
+}
+
 export function timingThresholds(agility) {
   const agi = Math.max(1, Number(agility || 1));
   return {
-    fastMs: Math.round((5 + (agi - 1) * 0.3) * 1000),
-    normalMs: Math.round((10 + (agi - 1) * 0.5) * 1000),
+    fastMs: Math.round((5 + 2.5 * (1 - Math.exp(-(agi - 1) / 10))) * 1000),
+    normalMs: Math.round((10 + 4 * (1 - Math.exp(-(agi - 1) / 10))) * 1000),
   };
 }
 
