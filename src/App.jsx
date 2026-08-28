@@ -5,6 +5,7 @@ import {
   Route
 } from "react-router-dom";
 
+import LearningSessionGate from "./components/LearningSessionGate";
 import WorldMap from "./pages/WorldMap";
 import PracticeMode from "./pages/PracticeMode";
 import ChallengeMode from "./pages/ChallengeMode";
@@ -14,16 +15,18 @@ import RecordsPage from "./pages/RecordsPage";
 
 export default function App() {
   return (
-    <HashRouter>
-      <Routes>
-        <Route path="/" element={<WorldMap />} />
-        <Route path="/practice" element={<PracticeMode />} />
-        <Route path="/challenge" element={<ChallengeV2 />} />
-        <Route path="/challenge-v2" element={<ChallengeV2 />} />
-        <Route path="/challenge-legacy" element={<ChallengeMode />} />
-        <Route path="/status-v2" element={<CharacterStatusV2 />} />
-        <Route path="/records" element={<RecordsPage />} />
-      </Routes>
-    </HashRouter>
+    <LearningSessionGate>
+      <HashRouter>
+        <Routes>
+          <Route path="/" element={<WorldMap />} />
+          <Route path="/practice" element={<PracticeMode />} />
+          <Route path="/challenge" element={<ChallengeV2 />} />
+          <Route path="/challenge-v2" element={<ChallengeV2 />} />
+          <Route path="/challenge-legacy" element={<ChallengeMode />} />
+          <Route path="/status-v2" element={<CharacterStatusV2 />} />
+          <Route path="/records" element={<RecordsPage />} />
+        </Routes>
+      </HashRouter>
+    </LearningSessionGate>
   );
 }
