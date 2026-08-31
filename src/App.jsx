@@ -12,6 +12,7 @@ import ChallengeMode from "./pages/ChallengeMode";
 import ChallengeV2 from "./pages/ChallengeV2";
 import CharacterStatusV2 from "./pages/CharacterStatusV2";
 import RecordsPage from "./pages/RecordsPage";
+import WordCodex from "./pages/WordCodex";
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/challenge-legacy" element={<ChallengeMode />} />
           <Route path="/status-v2" element={<CharacterStatusV2 />} />
           <Route path="/records" element={<RecordsPage />} />
+          <Route path="/codex" element={<WordCodex />} />
         </Routes>
       </HashRouter>
     </LearningSessionGate>
