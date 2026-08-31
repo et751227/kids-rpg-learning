@@ -25,6 +25,7 @@ export const learningApi = {
   session: () => jsonRequest("/api/learning/session"),
   login: (accessKey) => jsonRequest("/api/learning/session", { method: "POST", body: JSON.stringify({ accessKey }) }),
   progress: () => jsonRequest("/api/learning/progress"),
+  codex: () => jsonRequest("/api/learning/codex"),
   nextQuestion: (mode = "challenge") => jsonRequest(`/api/learning/question?mode=${encodeURIComponent(mode)}`),
   saveStats: (stats) => jsonRequest("/api/learning/stats", { method: "PUT", body: JSON.stringify(stats) }),
   submitAttempt: async ({ attemptId, vocabularyId, sessionKey, mode, submittedAnswer, responseTimeMs, metadata }) => {
