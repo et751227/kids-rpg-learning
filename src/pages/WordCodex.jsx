@@ -23,6 +23,7 @@ export default function WordCodex() {
   }, [data, filter]);
 
   const tranche = data?.tranche;
+  const collections = data?.collections || [];
   const progress = tranche ? Math.min(100, (tranche.unlockedCount / Math.max(1, tranche.target)) * 100) : 0;
 
   if (error) {
@@ -59,6 +60,48 @@ export default function WordCodex() {
             <div className="h-full bg-amber-400 transition-all" style={{ width: `${progress}%` }} />
           </div>
         </section>
+
+        {collections.length > 0 && (
+          <section className="grid gap-3">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-2xl font-black">🏅 收藏套組</h2>
+              <div className="text-sm text-indigo-200">完成套組可以拿到獎勵</div>
+            </div>
+            <div className="grid md:grid-cols-2 gap-3">
+              {collections.map((collection) => {
+                const percent = Math.min(100, (collection.unlockedCount / Math.max(1, collection.requiredCount)) * 100);
+                return (
+                  <article
+                    key={collection.id}
+                    className={`rounded-2xl border p-4 shadow-xl ${collection.completed ? "bg-amber-50 text-slate-900 border-amber-300" : "bg-white/10 border-white/15"}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-xl md:text-2xl font-black">{collection.completed ? "✅" : "🔒"} {collection.title}</div>
+                        <div className={`mt-1 text-sm ${collection.completed ? "text-slate-600" : "text-slate-300"}`}>{collection.description}</div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-xl font-black">{collection.unlockedCount} / {collection.requiredCount}</div>
+                        <div className={`text-xs ${collection.completed ? "text-green-700" : "text-indigo-200"}`}>{collection.completed ? "已完成" : "繼續解鎖"}</div>
+                      </div>
+                    </div>
+                    <div className={`h-3 rounded-full overflow-hidden mt-3 ${collection.completed ? "bg-amber-200" : "bg-black/35"}`}>
+                      <div className={`h-full transition-all ${collection.completed ? "bg-green-500" : "bg-indigo-400"}`} style={{ width: `${percent}%` }} />
+                    </div>
+                    <div className={`mt-4 rounded-xl px-4 py-3 flex items-center gap-3 ${collection.completed ? "bg-amber-100 border border-amber-300" : "bg-black/25 border border-white/10"}`}>
+                      <div className="text-3xl">{collection.reward?.icon || "🏅"}</div>
+                      <div>
+                        <div className="text-xs font-bold opacity-70">完成獎勵</div>
+                        <div className="text-lg font-black">{collection.reward?.name || "神秘徽章"}</div>
+                      </div>
+                      <div className="ml-auto text-sm font-black">{collection.reward?.earned ? "已獲得" : "未獲得"}</div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         <div className="flex flex-wrap gap-2 justify-center">
           {[
