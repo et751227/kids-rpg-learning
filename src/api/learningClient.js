@@ -33,7 +33,33 @@ export const learningApi = {
       method: "POST",
       body: JSON.stringify({ attemptId, vocabularyId, sessionKey, mode, submittedAnswer, responseTimeMs, metadata }),
     });
-    showVocabularyUnlock(result?.unlock);
+
+    let celebration = result?.unlock;
+    if (celebration?.newlyUnlocked) {
+      try {
+        const codex = await jsonRequest("/api/learning/codex");
+        const completedCollection = (codex?.collections || []).find((collection) =>
+          collection?.completed &&
+          Array.isArray(collection?.memberVocabularyIds) &&
+          collection.memberVocabularyIds.includes(celebration.vocabularyId),
+        );
+        if (completedCollection?.reward?.earned) {
+          celebration = {
+            ...celebration,
+            collectionReward: {
+              newlyEarned: true,
+              collectionId: completedCollection.id,
+              collectionTitle: completedCollection.title,
+              ...completedCollection.reward,
+            },
+          };
+        }
+      } catch {
+        // The word unlock remains valid even if the optional reward read model cannot be refreshed.
+      }
+    }
+
+    showVocabularyUnlock(celebration);
     return result;
   },
   completeBattle: (sessionKey) => jsonRequest("/api/learning/battle-result", {
