@@ -36,6 +36,7 @@ export function showVocabularyUnlock(unlock) {
   const chinese = String(unlock.chinese || "").trim();
   const unlockedCount = Number(unlock.unlockedCount || 0);
   const trancheTarget = Number(unlock.trancheTarget || 300);
+  const reward = unlock.collectionReward?.newlyEarned ? unlock.collectionReward : null;
 
   card.innerHTML = `
     <div style="font-size:52px;line-height:1">✨</div>
@@ -43,6 +44,14 @@ export function showVocabularyUnlock(unlock) {
     <div style="margin-top:14px;font-size:38px;font-weight:900;color:#0f172a">${escapeHtml(word)}</div>
     <div style="margin-top:4px;font-size:22px;font-weight:700;color:#475569">${escapeHtml(chinese)}</div>
     <div style="margin-top:18px;font-size:18px;font-weight:800;color:#166534">📖 已解鎖 ${unlockedCount} / ${trancheTarget}</div>
+    ${reward ? `
+      <div style="margin-top:22px;padding:18px;border-radius:20px;background:linear-gradient(135deg,#fef3c7,#fde68a);border:2px solid #f59e0b;color:#78350f">
+        <div style="font-size:20px;font-weight:900">🎉 COLLECTION COMPLETE!</div>
+        <div style="margin-top:8px;font-size:18px;font-weight:800">${escapeHtml(reward.collectionTitle || "單字套組")}完成</div>
+        <div style="margin-top:8px;font-size:34px">${escapeHtml(reward.icon || "🏅")}</div>
+        <div style="font-size:22px;font-weight:900">獲得「${escapeHtml(reward.name || "徽章")}」</div>
+      </div>
+    ` : ""}
     <button type="button" style="margin-top:22px;min-width:180px;min-height:52px;border:0;border-radius:16px;background:#7c3aed;color:white;font-size:20px;font-weight:900;cursor:pointer">收進圖鑑！</button>
   `;
 
@@ -56,7 +65,7 @@ export function showVocabularyUnlock(unlock) {
 
   window.setTimeout(() => {
     if (document.getElementById(UNLOCK_TOAST_ID) === overlay) close();
-  }, 6500);
+  }, reward ? 9000 : 6500);
 }
 
 function escapeHtml(value) {
