@@ -1,3 +1,5 @@
+import { showVocabularyUnlock } from "../ui/unlockCelebration";
+
 async function jsonRequest(url, options = {}) {
   const response = await fetch(url, {
     ...options,
@@ -25,11 +27,14 @@ export const learningApi = {
   progress: () => jsonRequest("/api/learning/progress"),
   nextQuestion: (mode = "challenge") => jsonRequest(`/api/learning/question?mode=${encodeURIComponent(mode)}`),
   saveStats: (stats) => jsonRequest("/api/learning/stats", { method: "PUT", body: JSON.stringify(stats) }),
-  submitAttempt: ({ attemptId, vocabularyId, sessionKey, mode, submittedAnswer, responseTimeMs, metadata }) =>
-    jsonRequest("/api/learning/attempt", {
+  submitAttempt: async ({ attemptId, vocabularyId, sessionKey, mode, submittedAnswer, responseTimeMs, metadata }) => {
+    const result = await jsonRequest("/api/learning/attempt", {
       method: "POST",
       body: JSON.stringify({ attemptId, vocabularyId, sessionKey, mode, submittedAnswer, responseTimeMs, metadata }),
-    }),
+    });
+    showVocabularyUnlock(result?.unlock);
+    return result;
+  },
   completeBattle: (sessionKey) => jsonRequest("/api/learning/battle-result", {
     method: "POST",
     body: JSON.stringify({ sessionKey }),
