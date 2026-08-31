@@ -18,6 +18,9 @@ export default function WorldMap() {
       case "status-v2":
         navigate("/status-v2");
         break;
+      case "codex":
+        navigate("/codex");
+        break;
       default:
         break;
     }
@@ -51,6 +54,13 @@ export default function WorldMap() {
         className="absolute right-[15%] bottom-[30%] bg-white bg-opacity-70 hover:bg-opacity-90 px-6 py-3 rounded-xl shadow-xl font-bold text-lg text-blue-800 border-2 border-blue-600 transition-all hover:scale-105"
       >
         🏰 RECORDS
+      </button>
+
+      <button
+        onClick={() => handleAreaClick("codex")}
+        className="absolute left-[4%] top-[12%] bg-indigo-950 bg-opacity-90 text-white px-5 py-3 rounded-xl shadow-xl font-bold text-base border-2 border-amber-300 transition-all hover:scale-105"
+      >
+        📖 單字圖鑑
       </button>
 
       <button
