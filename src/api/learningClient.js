@@ -26,6 +26,15 @@ export const learningApi = {
   login: (accessKey) => jsonRequest("/api/learning/session", { method: "POST", body: JSON.stringify({ accessKey }) }),
   progress: () => jsonRequest("/api/learning/progress"),
   codex: () => jsonRequest("/api/learning/codex"),
+  discoveryNext: () => jsonRequest("/api/learning/discovery"),
+  discoveryAttempt: async ({ attemptId, vocabularyId, submittedAnswer, responseTimeMs }) => {
+    const result = await jsonRequest("/api/learning/discovery", {
+      method: "POST",
+      body: JSON.stringify({ attemptId, vocabularyId, submittedAnswer, responseTimeMs }),
+    });
+    showVocabularyUnlock(result?.unlock);
+    return result;
+  },
   nextQuestion: (mode = "challenge") => jsonRequest(`/api/learning/question?mode=${encodeURIComponent(mode)}`),
   saveStats: (stats) => jsonRequest("/api/learning/stats", { method: "PUT", body: JSON.stringify(stats) }),
   submitAttempt: async ({ attemptId, vocabularyId, sessionKey, mode, submittedAnswer, responseTimeMs, metadata }) => {
