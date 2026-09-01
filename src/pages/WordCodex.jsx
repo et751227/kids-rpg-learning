@@ -46,15 +46,9 @@ export default function WordCodex() {
         </div>
 
         <section className="rounded-2xl bg-white/10 border border-white/15 p-4 md:p-5 shadow-xl">
-          <div className="flex flex-wrap justify-between gap-3 items-end">
-            <div>
-              <div className="text-3xl font-black text-amber-300">✨ {tranche.unlockedCount} / {tranche.target}</div>
-              <div className="text-sm text-slate-300 mt-1">已解鎖單字 / 第一階段 300 字</div>
-            </div>
-            <div className="text-right text-sm text-slate-300">
-              <div>目前正式題庫：{tranche.curriculumCount} / {tranche.target}</div>
-              <div>目前題庫內尚未解鎖：{tranche.lockedCount}</div>
-            </div>
+          <div>
+            <div className="text-3xl font-black text-amber-300">✨ {tranche.unlockedCount} / {tranche.target}</div>
+            <div className="text-sm text-slate-300 mt-1">已解鎖單字 / 第一階段 300 字</div>
           </div>
           <div className="h-4 bg-black/40 rounded-full overflow-hidden mt-4 border border-white/10">
             <div className="h-full bg-amber-400 transition-all" style={{ width: `${progress}%` }} />
@@ -105,9 +99,9 @@ export default function WordCodex() {
 
         <div className="flex flex-wrap gap-2 justify-center">
           {[
-            ["all", `全部 ${data.items.length}`],
-            ["unlocked", `✨ 已解鎖 ${tranche.unlockedCount}`],
-            ["locked", `🔒 未解鎖 ${tranche.lockedCount}`],
+            ["all", "全部"],
+            ["unlocked", "✨ 已解鎖"],
+            ["locked", "🔒 未解鎖"],
           ].map(([key, label]) => (
             <button
               key={key}
