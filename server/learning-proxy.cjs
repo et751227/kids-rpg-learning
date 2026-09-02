@@ -1,7 +1,9 @@
 const crypto = require("node:crypto");
 
 const COOKIE_NAME = "kids_family_session";
+const ADMIN_COOKIE_NAME = "kids_admin_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
+const ADMIN_SESSION_TTL_SECONDS = 60 * 60 * 8;
 
 function requiredEnv(name) {
   const value = String(process.env[name] || "").trim();
@@ -37,11 +39,28 @@ function createSessionToken() {
   return `${payload}.${signPayload(payload)}`;
 }
 
+function createAdminSessionToken() {
+  const expires = Math.floor(Date.now() / 1000) + ADMIN_SESSION_TTL_SECONDS;
+  const payload = `admin-v1.${expires}`;
+  return `${payload}.${signPayload(payload)}`;
+}
+
 function verifySession(req) {
   const token = parseCookies(req)[COOKIE_NAME];
   if (!token) return false;
   const parts = token.split(".");
   if (parts.length !== 3 || parts[0] !== "v1") return false;
+  const expires = Number(parts[1]);
+  if (!Number.isFinite(expires) || expires < Math.floor(Date.now() / 1000)) return false;
+  const payload = `${parts[0]}.${parts[1]}`;
+  return safeEqual(parts[2], signPayload(payload));
+}
+
+function verifyAdminSession(req) {
+  const token = parseCookies(req)[ADMIN_COOKIE_NAME];
+  if (!token) return false;
+  const parts = token.split(".");
+  if (parts.length !== 3 || parts[0] !== "admin-v1") return false;
   const expires = Number(parts[1]);
   if (!Number.isFinite(expires) || expires < Math.floor(Date.now() / 1000)) return false;
   const payload = `${parts[0]}.${parts[1]}`;
@@ -54,17 +73,36 @@ function requireSession(req, res) {
   return false;
 }
 
+function requireAdminSession(req, res) {
+  if (verifyAdminSession(req)) return true;
+  res.status(401).json({ error: "admin_session_required" });
+  return false;
+}
+
 function setSessionCookie(res) {
   const token = createSessionToken();
   res.setHeader("Set-Cookie", `${COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${SESSION_TTL_SECONDS}`);
+}
+
+function setAdminSessionCookie(res) {
+  const token = createAdminSessionToken();
+  res.setHeader("Set-Cookie", `${ADMIN_COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${ADMIN_SESSION_TTL_SECONDS}`);
 }
 
 function clearSessionCookie(res) {
   res.setHeader("Set-Cookie", `${COOKIE_NAME}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`);
 }
 
+function clearAdminSessionCookie(res) {
+  res.setHeader("Set-Cookie", `${ADMIN_COOKIE_NAME}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`);
+}
+
 function validateAccessKey(accessKey) {
   return safeEqual(accessKey || "", requiredEnv("KIDS_FAMILY_ACCESS_KEY"));
+}
+
+function validateAdminAccessKey(accessKey) {
+  return safeEqual(accessKey || "", requiredEnv("KIDS_ADMIN_ACCESS_KEY"));
 }
 
 function playerId() {
@@ -102,12 +140,17 @@ function noStore(res) {
 }
 
 module.exports = {
+  clearAdminSessionCookie,
   clearSessionCookie,
   noStore,
   playerId,
+  requireAdminSession,
   requireSession,
+  setAdminSessionCookie,
   setSessionCookie,
   upstream,
   validateAccessKey,
+  validateAdminAccessKey,
+  verifyAdminSession,
   verifySession,
 };

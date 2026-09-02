@@ -19,8 +19,6 @@ async function jsonRequest(url, options = {}) {
   return body;
 }
 
-const adminHeaders = (adminKey) => ({ "x-kids-admin-key": adminKey });
-
 export const learningApi = {
   session: () => jsonRequest("/api/learning/session"),
   login: (accessKey) => jsonRequest("/api/learning/session", { method: "POST", body: JSON.stringify({ accessKey }) }),
@@ -75,23 +73,12 @@ export const learningApi = {
     method: "POST",
     body: JSON.stringify({ sessionKey }),
   }),
-  vocabularyList: ({ adminKey, search = "", includeDisabled = true }) =>
-    jsonRequest(`/api/learning/vocabulary?search=${encodeURIComponent(search)}&includeDisabled=${includeDisabled ? "true" : "false"}`, {
-      headers: adminHeaders(adminKey),
-    }),
-  vocabularyCreate: ({ adminKey, item }) => jsonRequest("/api/learning/vocabulary", {
+  adminSession: () => jsonRequest("/api/admin/session"),
+  adminLogin: (accessKey) => jsonRequest("/api/admin/session", {
     method: "POST",
-    headers: adminHeaders(adminKey),
-    body: JSON.stringify(item),
+    body: JSON.stringify({ accessKey }),
   }),
-  vocabularyUpdate: ({ adminKey, vocabularyId, item }) => jsonRequest(`/api/learning/vocabulary?id=${encodeURIComponent(vocabularyId)}`, {
-    method: "PUT",
-    headers: adminHeaders(adminKey),
-    body: JSON.stringify(item),
-  }),
-  vocabularyImport: ({ adminKey, rows, dryRun = true }) => jsonRequest("/api/learning/vocabulary-import", {
-    method: "POST",
-    headers: adminHeaders(adminKey),
-    body: JSON.stringify({ rows, dryRun }),
-  }),
+  adminLogout: () => jsonRequest("/api/admin/session", { method: "DELETE" }),
+  adminVocabularyList: ({ search = "" } = {}) =>
+    jsonRequest(`/api/admin/vocabulary?search=${encodeURIComponent(search)}`),
 };

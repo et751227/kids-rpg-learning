@@ -1,13 +1,8 @@
-const { noStore, requireSession, upstream, validateAccessKey } = require("../../server/learning-proxy.cjs");
-
-function adminKey(req) {
-  return String(req.headers?.["x-kids-admin-key"] || "");
-}
+const { noStore, requireAdminSession, upstream } = require("../../server/learning-proxy.cjs");
 
 module.exports = async function handler(req, res) {
   noStore(res);
-  if (!requireSession(req, res)) return;
-  if (!validateAccessKey(adminKey(req))) return res.status(403).json({ error: "admin_key_required" });
+  if (!requireAdminSession(req, res)) return;
 
   try {
     if (req.method === "GET") {
