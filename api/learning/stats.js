@@ -19,6 +19,15 @@ module.exports = async function handler(req, res) {
       method: "PUT",
       body: { strength, vitality, agility },
     });
+    if (result.status >= 500) {
+      const payload = result.payload && typeof result.payload === "object" ? result.payload : {};
+      console.error("stats persistence upstream 5xx", {
+        status: result.status,
+        error: typeof payload.error === "string" ? payload.error : undefined,
+        message: typeof payload.message === "string" ? payload.message : undefined,
+        statusCode: typeof payload.statusCode === "number" ? payload.statusCode : undefined,
+      });
+    }
     return res.status(result.status).json(result.payload);
   } catch (error) {
     console.error("learning stats proxy failed", error);
