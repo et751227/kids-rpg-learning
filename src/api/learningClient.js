@@ -23,7 +23,6 @@ export const learningApi = {
   session: () => jsonRequest("/api/learning/session"),
   login: (accessKey) => jsonRequest("/api/learning/session", { method: "POST", body: JSON.stringify({ accessKey }) }),
   progress: () => jsonRequest("/api/learning/progress"),
-  battles: () => jsonRequest("/api/learning/battles"),
   codex: () => jsonRequest("/api/learning/codex"),
   discoveryNext: () => jsonRequest("/api/learning/discovery"),
   discoveryAttempt: async ({ attemptId, vocabularyId, submittedAnswer, responseTimeMs }) => {
