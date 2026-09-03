@@ -27,9 +27,9 @@ export default function RecordsPanel() {
 
   useEffect(() => {
     let active = true;
-    learningApi.battles()
+    learningApi.progress()
       .then((data) => {
-        if (active) setBattles(Array.isArray(data?.battles) ? data.battles : []);
+        if (active) setBattles(Array.isArray(data?.recentBattles) ? data.recentBattles : []);
       })
       .catch(() => {
         if (active) setError("戰鬥紀錄讀取失敗，請稍後再試");
@@ -76,8 +76,8 @@ export default function RecordsPanel() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
                 <div className="rounded-lg bg-blue-50 p-2"><div className="text-xs text-slate-500">答對</div><div className="font-bold">{correct}/{questions}</div></div>
                 <div className="rounded-lg bg-emerald-50 p-2"><div className="text-xs text-slate-500">正確率</div><div className="font-bold">{accuracy}%</div></div>
-                <div className="rounded-lg bg-amber-50 p-2"><div className="text-xs text-slate-500">獲得 EXP</div><div className="font-bold">+{Number(battle.exp?.earned || 0)}</div></div>
-                <div className="rounded-lg bg-violet-50 p-2"><div className="text-xs text-slate-500">等級</div><div className="font-bold">Lv.{battle.level?.before} → {battle.level?.after}</div></div>
+                <div className="rounded-lg bg-amber-50 p-2"><div className="text-xs text-slate-500">獲得 EXP</div><div className="font-bold">+{Number(battle.earnedExp || 0)}</div></div>
+                <div className="rounded-lg bg-violet-50 p-2"><div className="text-xs text-slate-500">等級</div><div className="font-bold">Lv.{battle.levelBefore} → {battle.levelAfter}</div></div>
               </div>
             </li>
           );
