@@ -45,6 +45,7 @@ function ChallengeContent() {
   const [monsterTier, setMonsterTier] = useState(() => randomMonsterTier());
   const [monsterHp, setMonsterHp] = useState(1);
   const [rounds, setRounds] = useState(0);
+  const [combo, setCombo] = useState(0);
   const [monsterHit, setMonsterHit] = useState(false);
   const [playerHit, setPlayerHit] = useState(false);
   const [battleResult, setBattleResult] = useState(null);
@@ -147,7 +148,9 @@ function ChallengeContent() {
       });
       const attempt = result.attempt || {};
       const correct = Boolean(attempt.correct);
-      const attack = attackResult({ level, strength: stats.strength, agility: stats.agility, responseTimeMs, correct });
+      const nextCombo = correct ? combo + 1 : 0;
+      setCombo(nextCombo);
+      const attack = attackResult({ level, strength: stats.strength, agility: stats.agility, responseTimeMs, correct, streak: nextCombo });
       const nextMonsterHp = Math.max(0, monsterHp - attack.damage);
       const nextRound = rounds + 1;
       setMonsterHp(nextMonsterHp);
@@ -155,7 +158,8 @@ function ChallengeContent() {
       if (attack.damage > 0) flashMonsterHit();
 
       if (nextMonsterHp <= 0) {
-        await finalizeBattle(`🏆 擊敗${monsterTier.label}！第 ${nextRound} 題完成最後一擊。`);
+        const comboText = nextCombo >= 3 ? ` 🔥 ${nextCombo} COMBO！` : "";
+        await finalizeBattle(`🏆 擊敗${monsterTier.label}！第 ${nextRound} 題完成最後一擊。${comboText}`);
         return;
       }
 
@@ -170,11 +174,12 @@ function ChallengeContent() {
       }
 
       const gradeText = attack.grade === "fast" ? "快速重擊" : attack.grade === "normal" ? "普通攻擊" : attack.grade === "slow" ? "慢速攻擊" : "沒有命中";
+      const comboText = nextCombo >= 3 ? ` 🔥 ${nextCombo} COMBO ×${attack.comboMultiplier.toFixed(1)}` : "";
       setFeedback(correct
-        ? `✅ ${gradeText}：${attack.damage} 傷害；答對成功阻止怪物攻擊！`
+        ? `✅ ${gradeText}：${attack.damage} 傷害；答對成功阻止怪物攻擊！${comboText}`
         : evaded
-          ? `❌ 答錯，正確是 ${attempt.correctAnswer || "請看下一題再試"}；⚡ 敏捷閃避成功，沒有受到傷害！`
-          : `❌ 答錯，正確是 ${attempt.correctAnswer || "請看下一題再試"}；受到 ${received} 傷害。`);
+          ? `❌ 答錯，Combo 歸零；正確是 ${attempt.correctAnswer || "請看下一題再試"}；⚡ 敏捷閃避成功，沒有受到傷害！`
+          : `❌ 答錯，Combo 歸零；正確是 ${attempt.correctAnswer || "請看下一題再試"}；受到 ${received} 傷害。`);
       window.setTimeout(() => {
         loadQuestion().catch(() => {
           setFeedback("下一題載入失敗，請稍後再試");
@@ -195,6 +200,7 @@ function ChallengeContent() {
     setPlayerHp(playerMaxHp(level, stats.vitality));
     setMonsterHp(monsterMaxHp(level, nextTier));
     setRounds(0);
+    setCombo(0);
     setBattleResult(null);
     setSettlementError(false);
     setFeedback(`${nextTier.icon} 遭遇${nextTier.label}！`);
@@ -243,6 +249,12 @@ function ChallengeContent() {
           </div>
         </div>
 
+        <div className="flex items-center justify-center gap-3">
+          <div className={`rounded-full px-4 py-1.5 font-extrabold ${combo >= 3 ? "bg-orange-500 text-white" : "bg-slate-800 text-slate-300"}`}>
+            🔥 Combo {combo}{combo >= 3 ? ` · ×${attackResult({ level, strength: stats.strength, agility: stats.agility, responseTimeMs: thresholds.normalMs, correct: true, streak: combo }).comboMultiplier.toFixed(1)}` : ""}
+          </div>
+        </div>
+
         <div className="rounded-xl bg-black/50 p-3 text-center font-bold min-h-[52px]">{settlementSaving ? "正在結算這場學習成果…" : feedback}</div>
 
         {battleResult && (
@@ -256,7 +268,7 @@ function ChallengeContent() {
 
         <div className="grid gap-3 min-h-0">
           <div className="text-center text-xl md:text-2xl font-extrabold bg-white text-blue-900 rounded-xl py-2 px-3">請拼出：「{question?.chinese || "—"}」</div>
-          <div className="text-center text-sm text-slate-300">快速 ≤ {(thresholds.fastMs / 1000).toFixed(1)} 秒 · 普通 ≤ {(thresholds.normalMs / 1000).toFixed(1)} 秒</div>
+          <div className="text-center text-sm text-slate-300">快速 ≤ {(thresholds.fastMs / 1000).toFixed(1)} 秒 · 普通 ≤ {(thresholds.normalMs / 1000).toFixed(1)} 秒 · 連續答對 3 題開始增加傷害</div>
           <AnswerPad
             input={input}
             answerLength={question?.answerLength || 0}
