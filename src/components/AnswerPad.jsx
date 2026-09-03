@@ -1,4 +1,4 @@
-const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+import { ANSWER_KEY_ROWS } from "../game/answerPadLayout";
 
 export default function AnswerPad({
   input,
@@ -22,39 +22,49 @@ export default function AnswerPad({
         <div className="text-center text-3xl md:text-4xl tracking-widest font-mono text-slate-900 rounded-full py-2 px-4 min-h-[64px] flex items-center justify-center border-2 border-slate-200">
           {input.join("") || "⋯"}
         </div>
-        <div className="grid grid-cols-7 gap-2 flex-1 content-center">
-          {LETTERS.map((char) => (
-            <button
-              key={char}
-              onClick={stop(() => input.length < answerLength && onLetter(char))}
-              disabled={disabled || input.length >= answerLength}
-              className="min-h-[56px] rounded-xl bg-yellow-300 text-slate-900 text-xl font-bold active:scale-95 disabled:opacity-40"
-            >
-              {char}
-            </button>
+        <div className="flex flex-col gap-2 flex-1 justify-center">
+          {ANSWER_KEY_ROWS.map((row, rowIndex) => (
+            <div key={rowIndex} className="flex justify-center gap-2">
+              {row.map((char) => (
+                <button
+                  key={char}
+                  type="button"
+                  data-letter={char}
+                  aria-label={`Letter ${char}`}
+                  onClick={stop(() => input.length < answerLength && onLetter(char))}
+                  disabled={disabled || input.length >= answerLength}
+                  className="min-h-[56px] flex-1 max-w-[78px] rounded-xl bg-yellow-300 text-slate-900 text-xl font-bold active:scale-95 disabled:opacity-40 touch-manipulation select-none"
+                >
+                  {char}
+                </button>
+              ))}
+            </div>
           ))}
         </div>
       </div>
 
       <div className="grid grid-rows-3 gap-3">
         <button
+          type="button"
           onClick={stop(onBackspace)}
           disabled={disabled || input.length === 0}
-          className="rounded-xl bg-slate-500 text-white text-lg font-bold min-h-[64px] disabled:opacity-40"
+          className="rounded-xl bg-slate-500 text-white text-lg font-bold min-h-[64px] disabled:opacity-40 touch-manipulation"
         >
           ⬅ 退格
         </button>
         <button
+          type="button"
           onClick={stop(onClear)}
           disabled={disabled || input.length === 0}
-          className="rounded-xl bg-slate-500 text-white text-lg font-bold min-h-[64px] disabled:opacity-40"
+          className="rounded-xl bg-slate-500 text-white text-lg font-bold min-h-[64px] disabled:opacity-40 touch-manipulation"
         >
           🔄 清除
         </button>
         <button
+          type="button"
           onClick={stop(onSubmit)}
           disabled={submitDisabled}
-          className="rounded-xl bg-green-600 text-white text-xl font-extrabold min-h-[72px] disabled:opacity-40"
+          className="rounded-xl bg-green-600 text-white text-xl font-extrabold min-h-[72px] disabled:opacity-40 touch-manipulation"
         >
           ✅ 確認
         </button>
