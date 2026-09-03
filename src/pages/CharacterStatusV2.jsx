@@ -8,7 +8,7 @@ function CharacterStatusContent() {
   const navigate = useNavigate();
   const [level, setLevel] = useState(1);
   const [exp, setExp] = useState(0);
-  const [nextLevelRequirement, setNextLevelRequirement] = useState(null);
+  const [nextLevelRequirement, setNextLevelRequirement] = useState(1);
   const [stats, setStats] = useState({ ...BASE_STATS });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -20,7 +20,7 @@ function CharacterStatusContent() {
       .then((data) => {
         setLevel(Number(data.level || 1));
         setExp(Number(data.exp || 0));
-        setNextLevelRequirement(data.nextLevelRequirement == null ? null : Number(data.nextLevelRequirement));
+        setNextLevelRequirement(Math.max(1, Number(data.nextLevelRequirement || 1)));
         setStats({
           strength: Number(data.stats?.strength || 1),
           vitality: Number(data.stats?.vitality || 1),
@@ -41,10 +41,8 @@ function CharacterStatusContent() {
     };
   }, [level, stats]);
 
-  const expPercent = nextLevelRequirement
-    ? Math.min(100, Math.max(0, (exp / nextLevelRequirement) * 100))
-    : 100;
-  const expRemaining = nextLevelRequirement == null ? null : Math.max(0, nextLevelRequirement - exp);
+  const expPercent = Math.min(100, Math.max(0, (exp / nextLevelRequirement) * 100));
+  const expRemaining = Math.max(0, nextLevelRequirement - exp);
 
   const changeStat = (key, delta) => {
     setStats((current) => {
@@ -105,16 +103,12 @@ function CharacterStatusContent() {
         <div className="rounded-2xl bg-slate-800 p-4 mb-6 shadow-lg border border-indigo-400/30">
           <div className="flex items-center justify-between gap-3 mb-2">
             <div className="font-bold text-lg">⭐ 升級進度</div>
-            <div className="font-mono text-sm">
-              {nextLevelRequirement == null ? `EXP ${exp} · MAX` : `EXP ${exp} / ${nextLevelRequirement}`}
-            </div>
+            <div className="font-mono text-sm">EXP {exp} / {nextLevelRequirement}</div>
           </div>
           <div className="h-5 bg-slate-700 rounded-full overflow-hidden border border-white/10">
             <div className="h-full bg-indigo-500 transition-all" style={{ width: `${expPercent}%` }} />
           </div>
-          <div className="mt-2 text-sm text-slate-300 text-right">
-            {expRemaining == null ? "已達目前最高等級" : `再獲得 ${expRemaining} EXP 升到 Lv.${level + 1}`}
-          </div>
+          <div className="mt-2 text-sm text-slate-300 text-right">再獲得 {expRemaining} EXP 升到 Lv.{level + 1}</div>
         </div>
 
         <div className="grid md:grid-cols-3 gap-4 mb-6">
