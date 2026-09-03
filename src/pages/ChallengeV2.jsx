@@ -144,7 +144,7 @@ function ChallengeContent() {
         mode: "challenge",
         submittedAnswer: input.join(""),
         responseTimeMs,
-        metadata: { battleRule: "v2", monsterTier: monsterTier.key },
+        metadata: { battleRule: "v3", monsterTier: monsterTier.key },
       });
       const attempt = result.attempt || {};
       const correct = Boolean(attempt.correct);
