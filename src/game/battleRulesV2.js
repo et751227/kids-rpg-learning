@@ -1,5 +1,7 @@
 export const BASE_STATS = { strength: 1, vitality: 1, agility: 1 };
 
+export const MONSTER_DAMAGE_SCALE = 3;
+
 export const MONSTER_TIERS = {
   normal: {
     key: "normal",
@@ -12,7 +14,7 @@ export const MONSTER_TIERS = {
     key: "elite",
     label: "菁英怪",
     icon: "👹",
-    hpMultiplier: 1.5,
+    hpMultiplier: 1.7,
     attackMultiplier: 1.2,
   },
   boss: {
@@ -20,7 +22,7 @@ export const MONSTER_TIERS = {
     label: "BOSS",
     icon: "🐉",
     hpMultiplier: 2.5,
-    attackMultiplier: 1.5,
+    attackMultiplier: 1.25,
   },
 };
 
@@ -60,12 +62,21 @@ export function monsterMaxHp(level, tier = MONSTER_TIERS.normal) {
 }
 
 export function monsterDamage(level, tier = MONSTER_TIERS.normal) {
-  const base = 4 + Number(level || 1) * 0.6;
+  const base = (4 + Number(level || 1) * 0.6) * MONSTER_DAMAGE_SCALE;
   return Math.max(1, Math.round(base * Number(tier?.attackMultiplier || 1)));
 }
 
 export function baseAttack(level, strength) {
   return 8 + Math.max(1, Number(level || 1)) * 0.45 + Math.max(1, Number(strength || 1)) * 1.2;
+}
+
+export function comboMultiplier(streak) {
+  const count = Math.max(0, Math.trunc(Number(streak) || 0));
+  if (count >= 10) return 1.4;
+  if (count >= 7) return 1.3;
+  if (count >= 5) return 1.2;
+  if (count >= 3) return 1.1;
+  return 1;
 }
 
 export function damageReduction(vitality) {
@@ -106,8 +117,8 @@ export function timingThresholds(agility) {
   };
 }
 
-export function attackResult({ level, strength, agility, responseTimeMs, correct }) {
-  if (!correct) return { damage: 0, grade: "miss", multiplier: 0 };
+export function attackResult({ level, strength, agility, responseTimeMs, correct, streak = 1 }) {
+  if (!correct) return { damage: 0, grade: "miss", multiplier: 0, comboMultiplier: 1 };
 
   const { fastMs, normalMs } = timingThresholds(agility);
 
@@ -120,6 +131,11 @@ export function attackResult({ level, strength, agility, responseTimeMs, correct
     grade = "normal";
     multiplier = 1;
   }
-
-  return { damage: Math.max(1, Math.round(baseAttack(level, strength) * multiplier)), grade, multiplier };
+  const combo = comboMultiplier(streak);
+  return {
+    damage: Math.max(1, Math.round(baseAttack(level, strength) * multiplier * combo)),
+    grade,
+    multiplier,
+    comboMultiplier: combo,
+  };
 }
