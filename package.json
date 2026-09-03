@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "vite",
     "test:battle": "node scripts/battle-rules-contract.mjs",
-    "build": "npm run test:battle && vite build",
+    "test:answer-pad": "node scripts/answer-pad-contract.mjs",
+    "build": "npm run test:battle && npm run test:answer-pad && vite build",
     "preview": "vite preview",
     "vercel-build": "npm run build"
   },
