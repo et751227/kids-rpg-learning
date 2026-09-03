@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import {
+  MONSTER_DAMAGE_SCALE,
   MONSTER_TIERS,
   attackResult,
   baseAttack,
+  comboMultiplier,
   damageReduction,
   deterministicEvadeRoll,
   didEvade,
@@ -21,12 +23,13 @@ assert.equal(monsterTierForRoll(0.969999).key, "elite");
 assert.equal(monsterTierForRoll(0.97).key, "boss");
 assert.equal(monsterTierForRoll(0.999999).key, "boss");
 
+assert.equal(MONSTER_DAMAGE_SCALE, 3);
 assert.equal(MONSTER_TIERS.normal.hpMultiplier, 1);
-assert.equal(MONSTER_TIERS.elite.hpMultiplier, 1.5);
+assert.equal(MONSTER_TIERS.elite.hpMultiplier, 1.7);
 assert.equal(MONSTER_TIERS.boss.hpMultiplier, 2.5);
 assert.equal(MONSTER_TIERS.normal.attackMultiplier, 1);
 assert.equal(MONSTER_TIERS.elite.attackMultiplier, 1.2);
-assert.equal(MONSTER_TIERS.boss.attackMultiplier, 1.5);
+assert.equal(MONSTER_TIERS.boss.attackMultiplier, 1.25);
 
 const level = 10;
 const normalHp = monsterMaxHp(level, MONSTER_TIERS.normal);
@@ -39,10 +42,22 @@ const eliteDamage = monsterDamage(level, MONSTER_TIERS.elite);
 const bossDamage = monsterDamage(level, MONSTER_TIERS.boss);
 assert.ok(normalDamage < eliteDamage && eliteDamage < bossDamage);
 
+assert.equal(comboMultiplier(0), 1);
+assert.equal(comboMultiplier(2), 1);
+assert.equal(comboMultiplier(3), 1.1);
+assert.equal(comboMultiplier(5), 1.2);
+assert.equal(comboMultiplier(7), 1.3);
+assert.equal(comboMultiplier(10), 1.4);
+assert.equal(comboMultiplier(99), 1.4);
+
 assert.equal(baseAttack(10, 1), 13.7);
 const lv10Fast = attackResult({ level: 10, strength: 1, agility: 1, responseTimeMs: 1000, correct: true });
 const lv20Fast = attackResult({ level: 20, strength: 1, agility: 1, responseTimeMs: 1000, correct: true });
 assert.ok(lv20Fast.damage > lv10Fast.damage, "level must contribute offense");
+const combo3 = attackResult({ level: 10, strength: 1, agility: 1, responseTimeMs: 1000, correct: true, streak: 3 });
+const combo10 = attackResult({ level: 10, strength: 1, agility: 1, responseTimeMs: 1000, correct: true, streak: 10 });
+assert.ok(combo3.damage > lv10Fast.damage, "3 correct answers must begin combo bonus");
+assert.ok(combo10.damage > combo3.damage, "longer combo must increase damage up to cap");
 
 assert.equal(receivedMonsterDamage(level, 1, MONSTER_TIERS.normal, true), 0, "correct answer must prevent attack");
 assert.ok(receivedMonsterDamage(level, 20, MONSTER_TIERS.normal, false) < normalDamage, "VIT must mitigate wrong-answer damage");
