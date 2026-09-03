@@ -1,92 +1,88 @@
-import { useState } from "react"; // 導入 useState
-import { useRecords } from "../hooks/useRecords";
+import { useEffect, useState } from "react";
+import { learningApi } from "../api/learningClient";
 
-// 2. 建立一個新的子元件來顯示單筆紀錄，並管理自己的 "是否展開" 狀態
-function RecordItem({ record }) {
-  const [isExpanded, setIsExpanded] = useState(false); // 4. 錯誤列表是否展開
+const TIER_LABELS = {
+  normal: "一般怪",
+  elite: "菁英怪",
+  boss: "BOSS",
+};
 
-  // 格式化秒數為 MM:SS
-  const formatTime = (seconds) => {
-    if (isNaN(seconds) || seconds === undefined) return "N/A";
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-  };
-
-  return (
-    <li className="bg-white bg-opacity-90 p-4 rounded-lg shadow flex flex-col border border-yellow-300">
-      <div className="text-sm text-gray-600 mb-2">🕒 挑戰時間：{record.time}</div>
-      <div className="flex justify-between items-center mb-2">
-        <div className="text-lg font-bold text-blue-800">✅ 正確率：{record.accuracy}%</div>
-        <div className="text-sm font-semibold text-gray-700">
-          ⏱️ 花費時間：{formatTime(record.timeTaken)}
-        </div>
-      </div>
-      <div className="text-sm text-yellow-700 mb-2">
-        💰 獲得獎勵：{record.coinsEarned} {record.coinsEarned > 0 ? 'EXP' : ''}
-      </div>
-
-      {/* 4. 檢視錯誤題目按鈕 */}
-      {record.wrong && record.wrong.length > 0 && (
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="text-sm text-left text-red-700 hover:text-red-900 font-semibold mt-2"
-        >
-          {isExpanded ? '➖ 隱藏錯誤題目' : '➕ 檢視錯誤題目'} ({record.wrong.length} 題)
-        </button>
-      )}
-
-      {/* 4. 展開的錯誤題目列表 */}
-      {isExpanded && (
-        <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <ul className="list-disc list-inside space-y-1 text-sm text-red-900">
-            {record.wrong.map((wrongItem, idx) => (
-              <li key={idx}>{wrongItem}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* 如果沒有錯誤題目 */}
-      {record.wrong && record.wrong.length === 0 && (
-        <div className="text-sm text-green-700 font-semibold mt-2">
-          🎉 完美通關！沒有錯誤！
-        </div>
-      )}
-    </li>
-  );
-}
-
+const formatTime = (value) => {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString("zh-TW", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
 
 export default function RecordsPanel() {
-  const { records, clearRecords } = useRecords();
+  const [battles, setBattles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  if (records.length === 0) {
-    return (
-      <div className="p-6 text-center text-lg text-gray-700 bg-white bg-opacity-90 rounded-lg shadow-lg max-w-lg mx-auto mt-10">
-        📝 尚無任何成績紀錄
-      </div>
-    );
-  }
+  useEffect(() => {
+    let active = true;
+    learningApi.battles()
+      .then((data) => {
+        if (active) setBattles(Array.isArray(data?.battles) ? data.battles : []);
+      })
+      .catch(() => {
+        if (active) setError("戰鬥紀錄讀取失敗，請稍後再試");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
+  }, []);
 
-  return (
-    <div className="p-6 bg-yellow-100 bg-opacity-70 rounded-xl shadow-xl max-w-2xl mx-auto mt-10">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold text-yellow-800">📖 歷史挑戰紀錄</h2>
-        <button
-          onClick={clearRecords}
-          className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded shadow text-sm"
-        >
-          清空紀錄
-        </button>
-      </div>
+  if (loading) {
+    return <div className="p-6 text-center text-lg text-gray-700 bg-white/90 rounded-lg shadow-lg max-w-2xl mx-auto mt-6">正在讀取城堡戰鬥紀錄…</div>;
+  }
 
-      {/* 1. 改為使用新的 RecordItem 元件 */}
-      <ul className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
-        {records.map((r, index) => (
-          <RecordItem key={index} record={r} />
-        ))}
-      </ul>
-    </div>
-  );
+  if (error) {
+    return <div className="p-6 text-center text-lg text-red-700 bg-white/90 rounded-lg shadow-lg max-w-2xl mx-auto mt-6">{error}</div>;
+  }
+
+  if (battles.length === 0) {
+    return <div className="p-6 text-center text-lg text-gray-700 bg-white/90 rounded-lg shadow-lg max-w-2xl mx-auto mt-6">📝 尚無完成的森林戰鬥紀錄</div>;
+  }
+
+  return (
+    <div className="p-5 bg-yellow-100/90 rounded-xl shadow-xl max-w-3xl mx-auto mt-6">
+      <div className="mb-4">
+        <h2 className="text-2xl font-bold text-yellow-900">📖 森林戰鬥紀錄</h2>
+        <div className="text-sm text-yellow-800 mt-1">這裡顯示已完成並成功結算的正式戰鬥。</div>
+      </div>
+
+      <ul className="space-y-3 max-h-[560px] overflow-y-auto pr-2">
+        {battles.map((battle) => {
+          const questions = Number(battle.questionCount || 0);
+          const correct = Number(battle.correctCount || 0);
+          const accuracy = questions > 0 ? Math.round((correct / questions) * 100) : 0;
+          const won = battle.outcome === "victory";
+          return (
+            <li key={battle.sessionKey} className="bg-white p-4 rounded-xl shadow border border-yellow-300">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <div className="font-bold text-lg text-slate-800">
+                  {won ? "🏆 勝利" : "💥 戰敗"} · {TIER_LABELS[battle.monsterTier] || battle.monsterTier}
+                </div>
+                <div className="text-sm text-slate-500">🕒 {formatTime(battle.completedAt)}</div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                <div className="rounded-lg bg-blue-50 p-2"><div className="text-xs text-slate-500">答對</div><div className="font-bold">{correct}/{questions}</div></div>
+                <div className="rounded-lg bg-emerald-50 p-2"><div className="text-xs text-slate-500">正確率</div><div className="font-bold">{accuracy}%</div></div>
+                <div className="rounded-lg bg-amber-50 p-2"><div className="text-xs text-slate-500">獲得 EXP</div><div className="font-bold">+{Number(battle.exp?.earned || 0)}</div></div>
+                <div className="rounded-lg bg-violet-50 p-2"><div className="text-xs text-slate-500">等級</div><div className="font-bold">Lv.{battle.level?.before} → {battle.level?.after}</div></div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
 }
