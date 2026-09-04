@@ -37,11 +37,26 @@ module.exports = async function handler(req, res) {
       console.warn("learning weakness read model request failed", { message: error?.message || "unknown" });
     }
 
-    let battleHistory = null;
+    let lifetimeBattleHistory = null;
+    let lifetimeBattleSummary = null;
     try {
       const history = await upstream(`/v1/players/${encodedPlayerId}/battles?limit=2000`);
       if (history.status >= 200 && history.status < 300) {
-        battleHistory = history.payload;
+        lifetimeBattleSummary = history.payload?.summary || null;
+        lifetimeBattleHistory = Array.isArray(history.payload?.battles)
+          ? history.payload.battles.map((battle) => ({
+              sessionKey: battle.sessionKey,
+              monsterTier: battle.monsterTier,
+              outcome: battle.outcome,
+              questionCount: Number(battle.questionCount || 0),
+              correctCount: Number(battle.correctCount || 0),
+              wrongCount: Number(battle.wrongCount || 0),
+              earnedExp: Number(battle.exp?.earned || 0),
+              levelBefore: Number(battle.level?.before || 1),
+              levelAfter: Number(battle.level?.after || 1),
+              completedAt: battle.completedAt,
+            }))
+          : [];
       } else {
         console.warn("learning lifetime battle history unavailable", { status: history.status });
       }
@@ -49,7 +64,12 @@ module.exports = async function handler(req, res) {
       console.warn("learning lifetime battle history request failed", { message: error?.message || "unknown" });
     }
 
-    return res.status(200).json({ ...progress.payload, wordWeakness, battleHistory });
+    return res.status(200).json({
+      ...progress.payload,
+      wordWeakness,
+      lifetimeBattleHistory,
+      lifetimeBattleSummary,
+    });
   } catch (error) {
     console.error("learning progress proxy failed", error);
     return res.status(502).json({ error: "learning_upstream_unavailable" });
