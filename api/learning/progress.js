@@ -37,7 +37,19 @@ module.exports = async function handler(req, res) {
       console.warn("learning weakness read model request failed", { message: error?.message || "unknown" });
     }
 
-    return res.status(200).json({ ...progress.payload, wordWeakness });
+    let battleHistory = null;
+    try {
+      const history = await upstream(`/v1/players/${encodedPlayerId}/battles?limit=2000`);
+      if (history.status >= 200 && history.status < 300) {
+        battleHistory = history.payload;
+      } else {
+        console.warn("learning lifetime battle history unavailable", { status: history.status });
+      }
+    } catch (error) {
+      console.warn("learning lifetime battle history request failed", { message: error?.message || "unknown" });
+    }
+
+    return res.status(200).json({ ...progress.payload, wordWeakness, battleHistory });
   } catch (error) {
     console.error("learning progress proxy failed", error);
     return res.status(502).json({ error: "learning_upstream_unavailable" });
