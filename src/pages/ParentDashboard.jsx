@@ -42,7 +42,7 @@ export default function ParentDashboard() {
 
   useEffect(() => {
     let active = true;
-    learningApi.adminSession()
+    learningApi.parentSession()
       .then(async (result) => {
         if (!active) return;
         if (result?.authenticated) {
@@ -64,18 +64,18 @@ export default function ParentDashboard() {
     setAuthState("signing-in");
     setAuthError("");
     try {
-      await learningApi.adminLogin(accessKey.trim());
+      await learningApi.parentLogin(accessKey.trim());
       setAccessKey("");
       setAuthState("ready");
       await loadProgress();
     } catch (error) {
-      setAuthError(error?.status === 401 ? "家長密碼不正確。" : "家長登入尚未設定完成。");
+      setAuthError(error?.status === 401 ? "家長密碼不正確。" : "家長登入暫時無法使用。");
       setAuthState("login");
     }
   };
 
   const logout = async () => {
-    try { await learningApi.adminLogout(); } catch {}
+    try { await learningApi.parentLogout(); } catch {}
     setProgress(null);
     setAuthState("login");
   };
