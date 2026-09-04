@@ -20,6 +20,8 @@ const formatTime = (value) => {
   });
 };
 
+const formatAccuracy = (value) => value === null || value === undefined ? "—" : `${Number(value)}%`;
+
 export default function ParentDashboard() {
   const [authState, setAuthState] = useState("checking");
   const [accessKey, setAccessKey] = useState("");
@@ -81,7 +83,9 @@ export default function ParentDashboard() {
   };
 
   const battles = Array.isArray(progress?.recentBattles) ? progress.recentBattles : [];
+  const weaknessAvailable = progress?.wordWeakness !== null && progress?.wordWeakness !== undefined;
   const weaknessWords = Array.isArray(progress?.wordWeakness?.words) ? progress.wordWeakness.words : [];
+  const modeSummary = progress?.wordWeakness?.modeSummary || null;
 
   const summary = useMemo(() => {
     const questions = battles.reduce((sum, battle) => sum + Number(battle.questionCount || 0), 0);
@@ -155,13 +159,37 @@ export default function ParentDashboard() {
         <section className="rounded-2xl bg-white border border-slate-200 p-5 shadow-sm">
           <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
             <div>
+              <h2 className="text-2xl font-black">Phase-2 封測校準</h2>
+              <p className="mt-1 text-sm text-slate-500">只讀取最近 {Number(progress?.wordWeakness?.calibrationAttemptWindow || 200)} 次 canonical attempts，用來驗證 Village / Forest 歸類與弱點模型，不會改孩子的進度。</p>
+            </div>
+          </div>
+
+          {!weaknessAvailable ? (
+            <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-amber-800">逐字分析目前暫時無法讀取，不能把這個狀態解讀成「沒有弱點」。</div>
+          ) : !modeSummary ? (
+            <div className="rounded-xl bg-slate-50 p-4 text-slate-600">校準資料尚未產生，請稍後重新整理。</div>
+          ) : (
+            <div className="grid md:grid-cols-4 gap-3">
+              <CalibrationMetric label="校準作答" value={modeSummary.attempts} detail={`錯 ${modeSummary.wrongCount} · ${formatAccuracy(modeSummary.accuracy)}`} />
+              <CalibrationMetric label="Village" value={modeSummary.practice?.attempts || 0} detail={`錯 ${modeSummary.practice?.wrongCount || 0} · ${formatAccuracy(modeSummary.practice?.accuracy)}`} />
+              <CalibrationMetric label="Forest" value={modeSummary.challenge?.attempts || 0} detail={`錯 ${modeSummary.challenge?.wrongCount || 0} · ${formatAccuracy(modeSummary.challenge?.accuracy)}`} />
+              <CalibrationMetric label="未歸類" value={modeSummary.otherAttempts || 0} detail={Number(modeSummary.otherAttempts || 0) === 0 ? "mode attribution 正常" : "需要檢查 mode 寫入"} />
+            </div>
+          )}
+        </section>
+
+        <section className="rounded-2xl bg-white border border-slate-200 p-5 shadow-sm">
+          <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
+            <div>
               <h2 className="text-2xl font-black">逐字弱點分析</h2>
-              <p className="mt-1 text-sm text-slate-500">每個字只看最近 {Number(progress?.wordWeakness?.recentAttemptWindowPerWord || 10)} 次作答，避免很久以前的錯誤永久拖累判斷。</p>
+              <p className="mt-1 text-sm text-slate-500">每個字只看最近 {Number(progress?.wordWeakness?.recentAttemptWindowPerWord || 10)} 次作答；「最近連對」可用來觀察弱點是否正在恢復。</p>
             </div>
             <div className="text-xs text-slate-400">最後遊玩：{formatTime(progress?.lastPlayedAt)}</div>
           </div>
 
-          {weaknessWords.length === 0 ? (
+          {!weaknessAvailable ? (
+            <div className="rounded-xl bg-amber-50 border border-amber-200 p-5 text-center text-amber-800">逐字弱點分析暫時不可用，請稍後重新整理。</div>
+          ) : weaknessWords.length === 0 ? (
             <div className="rounded-xl bg-emerald-50 p-5 text-center text-emerald-800">目前沒有偵測到需要特別關注的單字。</div>
           ) : (
             <div className="overflow-x-auto">
@@ -173,6 +201,7 @@ export default function ParentDashboard() {
                     <th className="px-4 py-3">最近作答</th>
                     <th className="px-4 py-3">答錯</th>
                     <th className="px-4 py-3">正確率</th>
+                    <th className="px-4 py-3">最近連對</th>
                     <th className="px-4 py-3">Village / Forest</th>
                     <th className="px-4 py-3">最後遇到</th>
                   </tr>
@@ -188,6 +217,7 @@ export default function ParentDashboard() {
                       <td className="px-4 py-3 font-semibold">{word.attempts}</td>
                       <td className="px-4 py-3 font-semibold text-red-700">{word.wrongCount}</td>
                       <td className="px-4 py-3 font-semibold">{word.accuracy}%</td>
+                      <td className="px-4 py-3 font-semibold">{Number(word.currentCorrectStreak || 0)}</td>
                       <td className="px-4 py-3">{Number(word.modeAttempts?.practice || 0)} / {Number(word.modeAttempts?.challenge || 0)}</td>
                       <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{formatTime(word.lastAnsweredAt)}</td>
                     </tr>
@@ -216,6 +246,16 @@ function Metric({ label, value }) {
     <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm">
       <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</div>
       <div className="mt-1 text-2xl font-black">{value}</div>
+    </div>
+  );
+}
+
+function CalibrationMetric({ label, value, detail }) {
+  return (
+    <div className="rounded-xl bg-slate-50 border border-slate-200 p-4">
+      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</div>
+      <div className="mt-1 text-2xl font-black">{value}</div>
+      <div className="mt-1 text-sm text-slate-600">{detail}</div>
     </div>
   );
 }
