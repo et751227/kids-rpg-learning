@@ -6,7 +6,8 @@
     "dev": "vite",
     "test:battle": "node scripts/battle-rules-contract.mjs",
     "test:answer-pad": "node scripts/answer-pad-contract.mjs",
-    "build": "npm run test:battle && npm run test:answer-pad && vite build",
+    "test:parent-session": "node scripts/parent-session-contract.mjs",
+    "build": "npm run test:battle && npm run test:answer-pad && npm run test:parent-session && vite build",
     "preview": "vite preview",
     "vercel-build": "npm run build"
   },
