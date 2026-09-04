@@ -215,6 +215,8 @@ function ChallengeContent() {
 
   const controlsDisabled = answerLocked || !question || playerHp <= 0 || monsterHp <= 0;
   const battleEnded = playerHp <= 0 || monsterHp <= 0;
+  const leveledUp = Number(battleResult?.level?.gained || 0) > 0;
+
   return (
     <div className="min-h-screen bg-slate-950 text-white p-3 md:p-5 flex items-center justify-center">
       <div className="w-full max-w-6xl grid gap-3 md:gap-4">
@@ -258,36 +260,60 @@ function ChallengeContent() {
         <div className="rounded-xl bg-black/50 p-3 text-center font-bold min-h-[52px]">{settlementSaving ? "正在結算這場學習成果…" : feedback}</div>
 
         {battleResult && (
-          <div className="rounded-xl border border-emerald-400/50 bg-emerald-950/40 p-3 text-center">
-            <span className="font-bold">本場 +{battleResult.exp.earned} EXP</span>
-            <span className="mx-2">·</span>
-            <span>{battleResult.correctCount}/{battleResult.questionCount} 題答對</span>
-            {battleResult.level.gained > 0 && <span className="ml-2 font-bold text-amber-200">· Lv.{battleResult.level.before} → Lv.{battleResult.level.after}，+{battleResult.level.statPointsGained} 屬性點</span>}
+          <div className={`rounded-2xl border p-5 text-center ${leveledUp ? "border-amber-300 bg-amber-950/40" : "border-emerald-400/50 bg-emerald-950/40"}`}>
+            <div className="text-2xl md:text-3xl font-black">{leveledUp ? `✨ LEVEL UP！Lv.${battleResult.level.after}` : "🎉 戰鬥結算完成"}</div>
+            <div className="mt-3 text-lg font-bold">本場 +{battleResult.exp.earned} EXP</div>
+            <div className="mt-1 text-slate-200">{battleResult.correctCount}/{battleResult.questionCount} 題答對</div>
+            {leveledUp && (
+              <div className="mt-3 text-amber-200 font-bold">獲得 {battleResult.level.statPointsGained} 點能力點，可以讓角色變強。</div>
+            )}
           </div>
         )}
 
-        <div className="grid gap-3 min-h-0">
-          <div className="text-center text-xl md:text-2xl font-extrabold bg-white text-blue-900 rounded-xl py-2 px-3">請拼出：「{question?.chinese || "—"}」</div>
-          <div className="text-center text-sm text-slate-300">快速 ≤ {(thresholds.fastMs / 1000).toFixed(1)} 秒 · 普通 ≤ {(thresholds.normalMs / 1000).toFixed(1)} 秒 · 連續答對 3 題開始增加傷害</div>
-          <AnswerPad
-            input={input}
-            answerLength={question?.answerLength || 0}
-            disabled={controlsDisabled}
-            onLetter={(char) => input.length < (question?.answerLength || 0) && setInput((value) => [...value, char])}
-            onBackspace={() => setInput((value) => value.slice(0, -1))}
-            onClear={() => setInput([])}
-            onSubmit={submit}
-          />
-          {battleEnded && (
-            <button
-              onClick={() => settlementError ? finalizeBattle() : restart()}
-              disabled={settlementSaving || (!battleResult && !settlementError)}
-              className="justify-self-end rounded-xl bg-indigo-600 text-lg font-bold min-h-[52px] px-6 py-2 disabled:opacity-40"
-            >
-              {settlementSaving ? "結算中…" : settlementError ? "重試結算" : "再打一場"}
-            </button>
-          )}
-        </div>
+        {!battleEnded ? (
+          <div className="grid gap-3 min-h-0">
+            <div className="text-center text-xl md:text-2xl font-extrabold bg-white text-blue-900 rounded-xl py-2 px-3">請拼出：「{question?.chinese || "—"}」</div>
+            <div className="text-center text-sm text-slate-300">快速 ≤ {(thresholds.fastMs / 1000).toFixed(1)} 秒 · 普通 ≤ {(thresholds.normalMs / 1000).toFixed(1)} 秒 · 連續答對 3 題開始增加傷害</div>
+            <AnswerPad
+              input={input}
+              answerLength={question?.answerLength || 0}
+              disabled={controlsDisabled}
+              onLetter={(char) => input.length < (question?.answerLength || 0) && setInput((value) => [...value, char])}
+              onBackspace={() => setInput((value) => value.slice(0, -1))}
+              onClear={() => setInput([])}
+              onSubmit={submit}
+            />
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 gap-3 rounded-2xl bg-slate-900/80 border border-white/10 p-4">
+            {settlementError ? (
+              <button
+                onClick={() => finalizeBattle()}
+                disabled={settlementSaving}
+                className="sm:col-span-2 rounded-xl bg-amber-500 text-slate-950 text-lg font-black min-h-[56px] px-6 py-3 disabled:opacity-40"
+              >
+                {settlementSaving ? "結算中…" : "重試結算"}
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => navigate("/status-v2")}
+                  disabled={!battleResult}
+                  className={`rounded-xl text-lg font-black min-h-[56px] px-6 py-3 disabled:opacity-40 ${leveledUp ? "bg-amber-400 text-slate-950" : "bg-slate-700 text-white"}`}
+                >
+                  {leveledUp ? `✨ 去分配 ${battleResult?.level?.statPointsGained || 0} 點能力點` : "🧙 查看我的角色"}
+                </button>
+                <button
+                  onClick={restart}
+                  disabled={!battleResult || settlementSaving}
+                  className="rounded-xl bg-indigo-600 text-lg font-black min-h-[56px] px-6 py-3 disabled:opacity-40"
+                >
+                  ⚔️ 再打一場
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
