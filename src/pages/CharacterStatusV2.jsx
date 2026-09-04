@@ -81,7 +81,7 @@ function CharacterStatusContent() {
     }
   };
 
-  if (loading) return <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center text-xl">正在讀取角色狀態…</div>;
+  if (loading) return <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center text-xl">正在讀取我的角色…</div>;
 
   const cards = [
     { key: "strength", label: "力量", icon: "⚔️", help: "提高每次答對時造成的傷害" },
@@ -95,7 +95,7 @@ function CharacterStatusContent() {
         <div className="flex items-center justify-between mb-4">
           <button onClick={() => navigate("/")} className="px-4 py-2 rounded-lg bg-slate-700">← 回地圖</button>
           <div className="text-right">
-            <div className="text-2xl font-bold">角色狀態</div>
+            <div className="text-2xl font-bold">🧙 CHARACTER · 我的角色</div>
             <div className="text-sm text-slate-300">Lv.{level} · 剩餘點數 {remaining}</div>
           </div>
         </div>
