@@ -26,6 +26,10 @@ export default function WordCodex() {
   const tranche = data?.tranche;
   const collections = data?.collections || [];
   const discoveredCount = tranche?.discoveredCount ?? tranche?.unlockedCount ?? 0;
+  const learningPoolCount = tranche?.learningPoolCount ?? 0;
+  const undiscoveredLearningPoolCount = tranche?.undiscoveredLearningPoolCount ?? Math.max(0, learningPoolCount - discoveredCount);
+  const villageAvailableCount = tranche?.villageAvailableCount;
+  const forestAvailableCount = tranche?.forestAvailableCount;
   const progress = tranche ? Math.min(100, (discoveredCount / Math.max(1, tranche.target)) * 100) : 0;
 
   if (error) {
@@ -58,6 +62,27 @@ export default function WordCodex() {
           <div className="h-4 bg-black/40 rounded-full overflow-hidden mt-4 border border-white/10">
             <div className="h-full bg-amber-400 transition-all" style={{ width: `${progress}%` }} />
           </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
+            <div className="rounded-xl bg-black/25 border border-white/10 p-3 text-center">
+              <div className="text-3xl font-black text-amber-200">{undiscoveredLearningPoolCount}</div>
+              <div className="text-sm font-bold mt-1">還沒發現</div>
+              <div className="text-xs text-slate-400 mt-1">已在學習題庫裡</div>
+            </div>
+            <div className="rounded-xl bg-black/25 border border-white/10 p-3 text-center">
+              <div className="text-3xl font-black text-emerald-300">{typeof villageAvailableCount === "number" ? villageAvailableCount : "—"}</div>
+              <div className="text-sm font-bold mt-1">🏡 村莊可遇見</div>
+              <div className="text-xs text-slate-400 mt-1">尚未揭開的村莊單字</div>
+            </div>
+            <div className="rounded-xl bg-black/25 border border-white/10 p-3 text-center">
+              <div className="text-3xl font-black text-violet-300">{typeof forestAvailableCount === "number" ? forestAvailableCount : "—"}</div>
+              <div className="text-sm font-bold mt-1">🌲 森林可遇見</div>
+              <div className="text-xs text-slate-400 mt-1">尚未揭開的森林單字</div>
+            </div>
+          </div>
+          {typeof villageAvailableCount === "number" && typeof forestAvailableCount === "number" ? (
+            <div className="text-xs text-slate-400 text-center mt-3">同一個單字可能同時在村莊和森林出現，所以兩個數字不要相加。</div>
+          ) : null}
         </section>
 
         {collections.length > 0 && (
