@@ -52,8 +52,8 @@ export default function DiscoveryLesson() {
         responseTimeMs: Date.now() - startedAt.current,
       });
       if (result?.attempt?.correct) {
-        setMessage(`✨ ${lesson.english} 已經收進魔法圖鑑！`);
-        setTimeout(load, 1200);
+        setMessage(`✨ ${lesson.english} 已加入冒險題庫！之後會在村莊或森林遇見；真正遇見後才會收進圖鑑。`);
+        setTimeout(load, 1800);
       } else {
         setMessage(`再看一次：${lesson.english} = ${lesson.chinese}`);
         setPhase("learn");
@@ -70,15 +70,18 @@ export default function DiscoveryLesson() {
     <div className="min-h-screen bg-gradient-to-b from-violet-950 via-indigo-950 to-slate-950 text-white p-4 md:p-6">
       <div className="max-w-5xl mx-auto grid gap-5">
         <div className="flex items-center gap-3"><WorldBackButton /><h1 className="text-3xl font-black flex-1 text-center">🔮 新單字探索</h1><div className="w-[110px]" /></div>
+        <div className="rounded-2xl bg-violet-900/40 border border-violet-300/20 px-4 py-3 text-center text-violet-100">
+          探索成功會把新單字加入村莊／森林題庫；圖鑑要等你真的在冒險中遇見它才會揭露。
+        </div>
         {busy && !lesson ? <div className="text-center text-xl py-20">正在尋找新的魔法單字…</div> : null}
         {message ? <div className="text-center text-xl font-bold rounded-2xl bg-white/10 p-4">{message}</div> : null}
         {lesson && phase === "learn" ? (
           <section className="rounded-3xl bg-white/10 border border-white/20 p-8 text-center shadow-2xl">
-            <div className="text-sm tracking-widest text-violet-200">NEW WORD DISCOVERED</div>
+            <div className="text-sm tracking-widest text-violet-200">NEW WORD TRAINING</div>
             <div className="text-6xl md:text-7xl font-black mt-4 text-amber-300">{lesson.english}</div>
             <div className="text-3xl mt-4">{lesson.chinese}</div>
             <button onClick={speak} className="mt-6 px-6 py-3 rounded-2xl bg-sky-600 font-black text-xl">🔊 聽一次</button>
-            <div className="mt-8 text-lg text-violet-100">先看、先聽，不用猜。準備好再試著拼出來。</div>
+            <div className="mt-8 text-lg text-violet-100">先看、先聽，不用猜。記住之後把它解鎖到冒險題庫。</div>
             <button onClick={() => { setPhase("recall"); setMessage(""); startedAt.current = Date.now(); }} className="mt-5 px-8 py-4 rounded-2xl bg-green-600 font-black text-2xl">我準備好了 ✨</button>
           </section>
         ) : null}
