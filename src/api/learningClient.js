@@ -73,10 +73,16 @@ export const learningApi = {
     method: "POST",
     body: JSON.stringify({ sessionKey }),
   }),
+  parentSession: () => jsonRequest("/api/admin/session?role=parent"),
+  parentLogin: (accessKey) => jsonRequest("/api/admin/session", {
+    method: "POST",
+    body: JSON.stringify({ accessKey, role: "parent" }),
+  }),
+  parentLogout: () => jsonRequest("/api/admin/session?role=parent", { method: "DELETE" }),
   adminSession: () => jsonRequest("/api/admin/session"),
   adminLogin: (accessKey) => jsonRequest("/api/admin/session", {
     method: "POST",
-    body: JSON.stringify({ accessKey }),
+    body: JSON.stringify({ accessKey, role: "admin" }),
   }),
   adminLogout: () => jsonRequest("/api/admin/session", { method: "DELETE" }),
   adminVocabularyList: ({ search = "" } = {}) =>
