@@ -2,11 +2,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AnswerPad from "../components/AnswerPad";
 import LearningSessionGate from "../components/LearningSessionGate";
-import WorldBackButton from "../components/WorldBackButton";
 import { learningApi } from "../api/learningClient";
 import {
   attackResult,
   didEvade,
+  masteryPreview,
+  monsterArchetypeForSession,
   monsterMaxHp,
   playerMaxHp,
   randomMonsterTier,
@@ -46,6 +47,9 @@ function ChallengeContent() {
   const [monsterHp, setMonsterHp] = useState(1);
   const [rounds, setRounds] = useState(0);
   const [combo, setCombo] = useState(0);
+  const [maxCombo, setMaxCombo] = useState(0);
+  const [correctHits, setCorrectHits] = useState(0);
+  const [fastCorrectCount, setFastCorrectCount] = useState(0);
   const [monsterHit, setMonsterHit] = useState(false);
   const [playerHit, setPlayerHit] = useState(false);
   const [battleResult, setBattleResult] = useState(null);
@@ -54,11 +58,15 @@ function ChallengeContent() {
   const questionStartedAt = useRef(Date.now());
   const sessionKey = useRef(`battle-v2-${newId()}`);
   const attemptId = useRef(null);
+  const battleLockArmed = useRef(false);
 
   const maxPlayerHp = playerMaxHp(level, stats.vitality);
   const maxMonsterHp = monsterMaxHp(level, monsterTier);
   const thresholds = timingThresholds(stats.agility);
   const monsterVisual = monsterVisualClasses[monsterTier.key] || monsterVisualClasses.normal;
+  const archetype = monsterArchetypeForSession(sessionKey.current, monsterTier.key);
+  const battleEnded = playerHp <= 0 || monsterHp <= 0;
+  const activeBattle = !loading && Boolean(question) && !battleEnded && !battleResult;
 
   const flashMonsterHit = () => {
     setMonsterHit(true);
@@ -92,7 +100,9 @@ function ChallengeContent() {
       const levelText = Number(battle.level.gained || 0) > 0
         ? ` ✨ 升到 Lv.${battle.level.after}，獲得 ${battle.level.statPointsGained} 點屬性點！`
         : "";
-      setFeedback(`${leadText} +${battle.exp.earned} EXP。${levelText}`);
+      const stars = Number(battle.mastery?.stars ?? 0);
+      const masteryText = battle.outcome === "victory" ? ` ${"⭐".repeat(stars)}${"☆".repeat(Math.max(0, 3 - stars))}` : "";
+      setFeedback(`${leadText} +${battle.exp.earned} EXP。${masteryText}${levelText}`);
     } catch (_) {
       setSettlementError(true);
       setFeedback("戰鬥已結束，但成長結算尚未成功。請按「重試結算」，不會重複計算 EXP。");
@@ -119,13 +129,43 @@ function ChallengeContent() {
         setMonsterHp(monsterMaxHp(nextLevel, monsterTier));
         await loadQuestion();
       } catch (_) {
-        if (active) setFeedback("角色或題庫載入失敗，請回角色狀態後再試");
+        if (active) setFeedback("角色或題庫載入失敗，請重新進入森林再試");
       } finally {
         if (active) setLoading(false);
       }
     })();
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    if (!activeBattle) {
+      if (battleLockArmed.current && window.history.state?.kidsBattleLock) {
+        battleLockArmed.current = false;
+        window.history.back();
+      }
+      return undefined;
+    }
+
+    if (!battleLockArmed.current) {
+      window.history.pushState({ ...(window.history.state || {}), kidsBattleLock: true }, "", window.location.href);
+      battleLockArmed.current = true;
+    }
+
+    const keepBattle = () => {
+      window.history.pushState({ ...(window.history.state || {}), kidsBattleLock: true }, "", window.location.href);
+      setFeedback("🔒 戰鬥已開始！擊敗怪物或戰敗後才能回世界。");
+    };
+    const blockUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("popstate", keepBattle);
+    window.addEventListener("beforeunload", blockUnload);
+    return () => {
+      window.removeEventListener("popstate", keepBattle);
+      window.removeEventListener("beforeunload", blockUnload);
+    };
+  }, [activeBattle]);
 
   const submit = async () => {
     if (answerLocked || !question || !input.length || playerHp <= 0 || monsterHp <= 0) return;
@@ -144,13 +184,30 @@ function ChallengeContent() {
         mode: "challenge",
         submittedAnswer: input.join(""),
         responseTimeMs,
-        metadata: { battleRule: "v3", monsterTier: monsterTier.key },
+        metadata: { battleRule: "v4", monsterTier: monsterTier.key, monsterArchetype: archetype.key },
       });
       const attempt = result.attempt || {};
       const correct = Boolean(attempt.correct);
       const nextCombo = correct ? combo + 1 : 0;
+      const nextMaxCombo = Math.max(maxCombo, nextCombo);
+      const nextCorrectHits = correct ? correctHits + 1 : correctHits;
+      const isFastCorrect = correct && responseTimeMs <= thresholds.fastMs;
+      const nextFastCorrectCount = fastCorrectCount + (isFastCorrect ? 1 : 0);
       setCombo(nextCombo);
-      const attack = attackResult({ level, strength: stats.strength, agility: stats.agility, responseTimeMs, correct, streak: nextCombo });
+      setMaxCombo(nextMaxCombo);
+      setCorrectHits(nextCorrectHits);
+      setFastCorrectCount(nextFastCorrectCount);
+
+      const attack = attackResult({
+        level,
+        strength: stats.strength,
+        agility: stats.agility,
+        responseTimeMs,
+        correct,
+        streak: nextCombo,
+        archetype,
+        correctHitIndex: nextCorrectHits,
+      });
       const nextMonsterHp = Math.max(0, monsterHp - attack.damage);
       const nextRound = rounds + 1;
       setMonsterHp(nextMonsterHp);
@@ -159,27 +216,30 @@ function ChallengeContent() {
 
       if (nextMonsterHp <= 0) {
         const comboText = nextCombo >= 3 ? ` 🔥 ${nextCombo} COMBO！` : "";
-        await finalizeBattle(`🏆 擊敗${monsterTier.label}！第 ${nextRound} 題完成最後一擊。${comboText}`);
+        await finalizeBattle(`🏆 擊敗${archetype.label}！第 ${nextRound} 題完成最後一擊。${comboText}`);
         return;
       }
 
       const evaded = didEvade(sessionKey.current, currentAttemptId, stats.agility, correct);
-      const received = receivedMonsterDamage(level, stats.vitality, monsterTier, correct, evaded);
+      const received = receivedMonsterDamage(level, stats.vitality, monsterTier, correct, evaded, archetype, nextMonsterHp / maxMonsterHp);
       const nextPlayerHp = Math.max(0, playerHp - received);
       setPlayerHp(nextPlayerHp);
       if (received > 0) flashPlayerHit();
       if (nextPlayerHp <= 0) {
-        await finalizeBattle(`💥 被${monsterTier.label}擊敗。這場共回答 ${nextRound} 題。`);
+        await finalizeBattle(`💥 被${archetype.label}擊敗。這場共回答 ${nextRound} 題。`);
         return;
       }
 
       const gradeText = attack.grade === "fast" ? "快速重擊" : attack.grade === "normal" ? "普通攻擊" : attack.grade === "slow" ? "慢速攻擊" : "沒有命中";
       const comboText = nextCombo >= 3 ? ` 🔥 ${nextCombo} COMBO ×${attack.comboMultiplier.toFixed(1)}` : "";
+      const traitText = attack.archetypeMultiplier < 1
+        ? archetype.key === "golem" || archetype.key === "dragon" ? " 🛡️ 護盾減傷！" : " 👻 特性削弱了這一擊！"
+        : attack.archetypeMultiplier > 1 ? " 🐺 連擊特性增傷！" : "";
       setFeedback(correct
-        ? `✅ ${gradeText}：${attack.damage} 傷害；答對成功阻止怪物攻擊！${comboText}`
+        ? `✅ ${gradeText}：${attack.damage} 傷害；答對成功阻止怪物攻擊！${comboText}${traitText}`
         : evaded
           ? `❌ 答錯，Combo 歸零；正確是 ${attempt.correctAnswer || "請看下一題再試"}；⚡ 敏捷閃避成功，沒有受到傷害！`
-          : `❌ 答錯，Combo 歸零；正確是 ${attempt.correctAnswer || "請看下一題再試"}；受到 ${received} 傷害。`);
+          : `❌ 答錯，Combo 歸零；正確是 ${attempt.correctAnswer || "請看下一題再試"}；受到 ${received} 傷害。${archetype.key === "serpent" ? " ☠️ 毒牙加重傷害！" : archetype.key === "dragon" && nextMonsterHp / maxMonsterHp <= 0.35 ? " 🔥 巨龍狂暴！" : ""}`);
       window.setTimeout(() => {
         loadQuestion().catch(() => {
           setFeedback("下一題載入失敗，請稍後再試");
@@ -201,9 +261,13 @@ function ChallengeContent() {
     setMonsterHp(monsterMaxHp(level, nextTier));
     setRounds(0);
     setCombo(0);
+    setMaxCombo(0);
+    setCorrectHits(0);
+    setFastCorrectCount(0);
     setBattleResult(null);
     setSettlementError(false);
-    setFeedback(`${nextTier.icon} 遭遇${nextTier.label}！`);
+    const nextArchetype = monsterArchetypeForSession(sessionKey.current, nextTier.key);
+    setFeedback(`${nextArchetype.icon} 遭遇${nextArchetype.label}！${nextArchetype.trait}`);
     setAnswerLocked(true);
     try { await loadQuestion(); }
     catch (_) { setFeedback("題目載入失敗，請稍後再試"); setAnswerLocked(false); }
@@ -213,20 +277,34 @@ function ChallengeContent() {
     return <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center text-2xl">正在載入角色與題目…</div>;
   }
 
-  const controlsDisabled = answerLocked || !question || playerHp <= 0 || monsterHp <= 0;
-  const battleEnded = playerHp <= 0 || monsterHp <= 0;
+  const controlsDisabled = answerLocked || !question || battleEnded;
   const leveledUp = Number(battleResult?.level?.gained || 0) > 0;
+  const mastery = battleResult?.mastery || masteryPreview({
+    outcome: monsterHp <= 0 ? "victory" : playerHp <= 0 ? "defeat" : "unfinished",
+    archetype,
+    questionCount: rounds,
+    correctCount: Math.max(0, rounds - (rounds - correctHits)),
+    maxCombo,
+    fastCorrectCount,
+  });
 
   return (
     <div className="min-h-screen bg-slate-950 text-white p-3 md:p-5 flex items-center justify-center">
       <div className="w-full max-w-6xl grid gap-3 md:gap-4">
         <div className="grid grid-cols-[auto_1fr_auto] gap-3 items-center">
-          <div className="flex gap-2 items-center">
-            <WorldBackButton />
-            <button onClick={() => navigate("/status-v2")} className="px-4 py-3 rounded-xl bg-slate-700 font-bold min-h-[48px]">🧙 角色狀態</button>
+          <div className="min-w-[150px]">
+            {activeBattle ? (
+              <div className="px-3 py-2 rounded-xl bg-red-950 border border-red-400/50 text-red-100 font-black text-sm">🔒 戰鬥中 · 無法離開</div>
+            ) : <div />}
           </div>
           <div className="text-center text-xl md:text-2xl font-extrabold">🌲 森林戰鬥</div>
           <div className="text-right text-sm md:text-base">Lv.{level}　⚔️{stats.strength} ❤️{stats.vitality} ⚡{stats.agility}</div>
+        </div>
+
+        <div className="rounded-xl bg-indigo-950/70 border border-indigo-300/30 px-4 py-3 text-center">
+          <div className="text-xl font-black">{archetype.icon} {archetype.label} <span className="text-sm font-bold text-indigo-200">· {monsterTier.label}</span></div>
+          <div className="text-sm text-indigo-100 mt-1">特性：{archetype.trait}</div>
+          <div className="text-xs text-amber-200 mt-1">⭐ 挑戰：{archetype.mastery} · ⭐⭐⭐ Perfect</div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -242,9 +320,9 @@ function ChallengeContent() {
 
           <div className={`rounded-2xl border-2 p-3 transition ${monsterVisual.card}`}>
             <div className="flex items-center justify-between gap-3">
-              <div className={`${monsterVisual.icon} transition-transform duration-300 ${monsterHit ? "scale-75 rotate-6" : "scale-100"}`} aria-label={monsterTier.label}>{monsterTier.icon}</div>
+              <div className={`${monsterVisual.icon} transition-transform duration-300 ${monsterHit ? "scale-75 rotate-6" : "scale-100"}`} aria-label={archetype.label}>{archetype.icon}</div>
               <div className="flex-1">
-                <div className="flex justify-between text-sm mb-1"><span>{monsterTier.label}</span><span>{monsterHp}/{maxMonsterHp}</span></div>
+                <div className="flex justify-between text-sm mb-1"><span>{archetype.label}</span><span>{monsterHp}/{maxMonsterHp}</span></div>
                 <div className="h-6 bg-slate-800 rounded-full overflow-hidden border border-white/20"><div className={`h-full transition-all ${monsterVisual.hp}`} style={{ width: `${Math.min(100, (monsterHp / maxMonsterHp) * 100)}%` }} /></div>
               </div>
             </div>
@@ -253,7 +331,7 @@ function ChallengeContent() {
 
         <div className="flex items-center justify-center gap-3">
           <div className={`rounded-full px-4 py-1.5 font-extrabold ${combo >= 3 ? "bg-orange-500 text-white" : "bg-slate-800 text-slate-300"}`}>
-            🔥 Combo {combo}{combo >= 3 ? ` · ×${attackResult({ level, strength: stats.strength, agility: stats.agility, responseTimeMs: thresholds.normalMs, correct: true, streak: combo }).comboMultiplier.toFixed(1)}` : ""}
+            🔥 Combo {combo}{combo >= 3 ? ` · ×${attackResult({ level, strength: stats.strength, agility: stats.agility, responseTimeMs: thresholds.normalMs, correct: true, streak: combo, archetype, correctHitIndex: Math.max(1, correctHits) }).comboMultiplier.toFixed(1)}` : ""}
           </div>
         </div>
 
@@ -262,11 +340,11 @@ function ChallengeContent() {
         {battleResult && (
           <div className={`rounded-2xl border p-5 text-center ${leveledUp ? "border-amber-300 bg-amber-950/40" : "border-emerald-400/50 bg-emerald-950/40"}`}>
             <div className="text-2xl md:text-3xl font-black">{leveledUp ? `✨ LEVEL UP！Lv.${battleResult.level.after}` : "🎉 戰鬥結算完成"}</div>
+            <div className="mt-2 text-3xl tracking-widest">{"⭐".repeat(Number(mastery?.stars || 0))}{"☆".repeat(Math.max(0, 3 - Number(mastery?.stars || 0)))}</div>
+            <div className="mt-2 text-sm font-bold text-amber-200">{mastery?.perfect ? "PERFECT！完全征服這場戰鬥" : `Mastery ${Number(mastery?.stars || 0)} / 3`}</div>
             <div className="mt-3 text-lg font-bold">本場 +{battleResult.exp.earned} EXP</div>
             <div className="mt-1 text-slate-200">{battleResult.correctCount}/{battleResult.questionCount} 題答對</div>
-            {leveledUp && (
-              <div className="mt-3 text-amber-200 font-bold">獲得 {battleResult.level.statPointsGained} 點能力點，可以讓角色變強。</div>
-            )}
+            {leveledUp && <div className="mt-3 text-amber-200 font-bold">獲得 {battleResult.level.statPointsGained} 點能力點，可以讓角色變強。</div>}
           </div>
         )}
 
@@ -285,17 +363,18 @@ function ChallengeContent() {
             />
           </div>
         ) : (
-          <div className="grid sm:grid-cols-2 gap-3 rounded-2xl bg-slate-900/80 border border-white/10 p-4">
+          <div className="grid sm:grid-cols-3 gap-3 rounded-2xl bg-slate-900/80 border border-white/10 p-4">
             {settlementError ? (
               <button
                 onClick={() => finalizeBattle()}
                 disabled={settlementSaving}
-                className="sm:col-span-2 rounded-xl bg-amber-500 text-slate-950 text-lg font-black min-h-[56px] px-6 py-3 disabled:opacity-40"
+                className="sm:col-span-3 rounded-xl bg-amber-500 text-slate-950 text-lg font-black min-h-[56px] px-6 py-3 disabled:opacity-40"
               >
                 {settlementSaving ? "結算中…" : "重試結算"}
               </button>
             ) : (
               <>
+                <button onClick={() => navigate("/", { replace: true })} disabled={!battleResult} className="rounded-xl bg-emerald-600 text-lg font-black min-h-[56px] px-6 py-3 disabled:opacity-40">🌍 返回世界</button>
                 <button
                   onClick={() => navigate("/status-v2")}
                   disabled={!battleResult}
@@ -303,13 +382,7 @@ function ChallengeContent() {
                 >
                   {leveledUp ? `✨ 去分配 ${battleResult?.level?.statPointsGained || 0} 點能力點` : "🧙 查看我的角色"}
                 </button>
-                <button
-                  onClick={restart}
-                  disabled={!battleResult || settlementSaving}
-                  className="rounded-xl bg-indigo-600 text-lg font-black min-h-[56px] px-6 py-3 disabled:opacity-40"
-                >
-                  ⚔️ 再打一場
-                </button>
+                <button onClick={restart} disabled={!battleResult || settlementSaving} className="rounded-xl bg-indigo-600 text-lg font-black min-h-[56px] px-6 py-3 disabled:opacity-40">⚔️ 再打一場</button>
               </>
             )}
           </div>
@@ -320,5 +393,9 @@ function ChallengeContent() {
 }
 
 export default function ChallengeV2() {
-  return <LearningSessionGate><ChallengeContent /></LearningSessionGate>;
+  return (
+    <LearningSessionGate>
+      <ChallengeContent />
+    </LearningSessionGate>
+  );
 }
