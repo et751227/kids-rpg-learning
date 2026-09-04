@@ -17,7 +17,7 @@ const WEAKNESS_LABELS = {
 const FILTERS = [
   ["all", "全部"],
   ["victory", "🏆 勝利"],
-  ["boss", "🐉 BOSS"],
+  ["boss", "👑 BOSS"],
   ["perfect", "⭐⭐⭐ PERFECT"],
   ["defeat", "💥 戰敗"],
 ];
@@ -118,7 +118,15 @@ export default function RecordsPanel() {
       moments.push({ icon: "⭐⭐⭐", title: "完成 PERFECT", detail: `${MONSTER_ARCHETYPES[latestPerfect.monsterArchetype]?.label || "森林戰鬥"} · ${formatTime(latestPerfect.completedAt)}` });
     }
     if (latestBossWin) {
-      moments.push({ icon: "🐉", title: "擊敗王者巨龍", detail: `${starText(Number(latestBossWin.mastery?.stars || 0))} · ${formatTime(latestBossWin.completedAt)}` });
+      const bossArchetype = latestBossWin.monsterArchetype ? MONSTER_ARCHETYPES[latestBossWin.monsterArchetype] : null;
+      const masteryDetail = bossArchetype && latestBossWin.mastery
+        ? `${starText(Number(latestBossWin.mastery.stars || 0))} · `
+        : "";
+      moments.push({
+        icon: bossArchetype?.icon || "👑",
+        title: bossArchetype ? `擊敗${bossArchetype.label}` : "擊敗 BOSS",
+        detail: `${masteryDetail}${formatTime(latestBossWin.completedAt)}`,
+      });
     }
     if (latestLevelUp) {
       moments.push({ icon: "✨", title: `升上 Lv.${latestLevelUp.levelAfter}`, detail: formatTime(latestLevelUp.completedAt) });
@@ -191,7 +199,7 @@ export default function RecordsPanel() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center mt-5">
           <div className="rounded-2xl bg-white/90 p-4 shadow"><div className="text-xs text-slate-500">🏆 總勝利</div><div className="text-3xl font-black text-slate-900">{summary.wins}</div></div>
           <div className="rounded-2xl bg-white/90 p-4 shadow"><div className="text-xs text-slate-500">⚔️ 冒險戰鬥</div><div className="text-3xl font-black text-slate-900">{summary.battlesCount}</div></div>
-          <div className="rounded-2xl bg-amber-50 p-4 shadow border border-amber-300"><div className="text-xs text-amber-800">🐉 BOSS 勝利</div><div className="text-3xl font-black text-amber-950">{summary.bossWins}</div></div>
+          <div className="rounded-2xl bg-amber-50 p-4 shadow border border-amber-300"><div className="text-xs text-amber-800">👑 BOSS 勝利</div><div className="text-3xl font-black text-amber-950">{summary.bossWins}</div></div>
           <div className="rounded-2xl bg-white/90 p-4 shadow"><div className="text-xs text-slate-500">📖 歷史正確率</div><div className="text-3xl font-black text-slate-900">{summary.accuracy}%</div></div>
         </div>
         <div className="mt-3 text-center text-sm font-bold text-amber-800">一路累積了 +{summary.exp} EXP · 遭遇過 {summary.bossBattles} 場 BOSS 戰</div>
@@ -294,11 +302,11 @@ export default function RecordsPanel() {
                 <li key={battle.sessionKey} className={`bg-white p-4 rounded-2xl shadow border ${isBoss ? "border-amber-400 ring-1 ring-amber-200" : "border-yellow-200"}`}>
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                     <div className={`font-black text-lg ${isBoss ? "text-amber-900" : "text-slate-800"}`}>
-                      {won ? "🏆 勝利" : "💥 戰敗"} · {archetype ? `${archetype.icon} ${archetype.label}` : `${isBoss ? "🐉 " : ""}${TIER_LABELS[battle.monsterTier] || battle.monsterTier}`}
+                      {won ? "🏆 勝利" : "💥 戰敗"} · {archetype ? `${archetype.icon} ${archetype.label}` : (TIER_LABELS[battle.monsterTier] || battle.monsterTier)}
                     </div>
                     <div className="text-sm text-slate-500">🕒 {formatTime(battle.completedAt)}</div>
                   </div>
-                  {battle.mastery && (
+                  {battle.mastery && archetype && (
                     <div className="mb-3 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 flex flex-wrap items-center justify-between gap-2">
                       <div className="font-black text-amber-900">{starText(stars)} Mastery</div>
                       <div className="text-xs font-bold text-amber-800">{battle.mastery.perfect ? "PERFECT" : `最高 Combo ${Number(battle.mastery.maxCombo || 0)}`}</div>
