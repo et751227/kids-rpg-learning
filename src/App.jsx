@@ -15,6 +15,7 @@ import RecordsPage from "./pages/RecordsPage";
 import WordCodex from "./pages/WordCodex";
 import DiscoveryLesson from "./pages/DiscoveryLesson";
 import AdminVocabulary from "./pages/AdminVocabulary";
+import ParentDashboard from "./pages/ParentDashboard";
 
 function ChildRoutes() {
   return (
@@ -38,6 +39,7 @@ export default function App() {
   return (
     <HashRouter>
       <Routes>
+        <Route path="/parent" element={<ParentDashboard />} />
         <Route path="/admin/vocabulary" element={<AdminVocabulary />} />
         <Route path="/*" element={<ChildRoutes />} />
       </Routes>
