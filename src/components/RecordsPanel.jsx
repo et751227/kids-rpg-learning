@@ -28,29 +28,47 @@ const formatTime = (value) => {
 
 export default function RecordsPanel() {
   const [progress, setProgress] = useState(null);
+  const [battleHistory, setBattleHistory] = useState([]);
+  const [battleSummary, setBattleSummary] = useState(null);
+  const [battlePage, setBattlePage] = useState(null);
+  const [historyAvailable, setHistoryAvailable] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
+  const [historyError, setHistoryError] = useState("");
 
   useEffect(() => {
     let active = true;
-    learningApi.progress()
-      .then((data) => {
-        if (active) setProgress(data);
-      })
-      .catch(() => {
-        if (active) setError("冒險紀錄讀取失敗，請稍後再試");
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+    (async () => {
+      const [progressResult, historyResult] = await Promise.allSettled([
+        learningApi.progress(),
+        learningApi.battleHistory({ offset: 0, limit: 50 }),
+      ]);
+
+      if (!active) return;
+      if (progressResult.status === "rejected") {
+        setError("冒險紀錄讀取失敗，請稍後再試");
+        setLoading(false);
+        return;
+      }
+      setProgress(progressResult.value);
+
+      if (historyResult.status === "fulfilled") {
+        setBattleHistory(Array.isArray(historyResult.value?.lifetimeBattleHistory) ? historyResult.value.lifetimeBattleHistory : []);
+        setBattleSummary(historyResult.value?.lifetimeBattleSummary || null);
+        setBattlePage(historyResult.value?.battleHistoryPage || null);
+        setHistoryAvailable(true);
+      } else {
+        setHistoryError("完整歷史目前暫時無法讀取，下面只顯示近期紀錄；不要把這個數字當成總成就。");
+      }
+      setLoading(false);
+    })();
     return () => { active = false; };
   }, []);
 
-  const lifetimeAvailable = Array.isArray(progress?.lifetimeBattleHistory);
-  const battles = lifetimeAvailable
-    ? progress.lifetimeBattleHistory
+  const battles = historyAvailable
+    ? battleHistory
     : (Array.isArray(progress?.recentBattles) ? progress.recentBattles : []);
-  const lifetimeSummary = progress?.lifetimeBattleSummary || null;
   const weaknessWords = Array.isArray(progress?.wordWeakness?.words) ? progress.wordWeakness.words : [];
 
   const computedSummary = useMemo(() => {
@@ -65,18 +83,38 @@ export default function RecordsPanel() {
     return { battlesCount, wins, bossBattles, bossWins, questions, correct, exp, accuracy };
   }, [battles]);
 
-  const summary = lifetimeSummary ? {
-    battlesCount: Number(lifetimeSummary.battles || 0),
-    wins: Number(lifetimeSummary.victories || 0),
-    bossBattles: Number(lifetimeSummary.bosses?.encountered || 0),
-    bossWins: Number(lifetimeSummary.bosses?.victories || 0),
-    questions: Number(lifetimeSummary.questions || 0),
-    correct: Number(lifetimeSummary.correct || 0),
-    exp: Number(lifetimeSummary.earnedExp || 0),
-    accuracy: Number(lifetimeSummary.questions || 0) > 0
-      ? Math.round((Number(lifetimeSummary.correct || 0) / Number(lifetimeSummary.questions || 0)) * 100)
+  const summary = battleSummary ? {
+    battlesCount: Number(battleSummary.battles || 0),
+    wins: Number(battleSummary.victories || 0),
+    bossBattles: Number(battleSummary.bosses?.encountered || 0),
+    bossWins: Number(battleSummary.bosses?.victories || 0),
+    questions: Number(battleSummary.questions || 0),
+    correct: Number(battleSummary.correct || 0),
+    exp: Number(battleSummary.earnedExp || 0),
+    accuracy: Number(battleSummary.questions || 0) > 0
+      ? Math.round((Number(battleSummary.correct || 0) / Number(battleSummary.questions || 0)) * 100)
       : 0,
   } : computedSummary;
+
+  const loadMore = async () => {
+    if (!historyAvailable || !battlePage?.hasMore || loadingMore) return;
+    setLoadingMore(true);
+    setHistoryError("");
+    try {
+      const next = await learningApi.battleHistory({ offset: battlePage.nextOffset, limit: 50 });
+      const incoming = Array.isArray(next?.lifetimeBattleHistory) ? next.lifetimeBattleHistory : [];
+      setBattleHistory((current) => {
+        const seen = new Set(current.map((battle) => battle.sessionKey));
+        return [...current, ...incoming.filter((battle) => !seen.has(battle.sessionKey))];
+      });
+      setBattleSummary(next?.lifetimeBattleSummary || battleSummary);
+      setBattlePage(next?.battleHistoryPage || null);
+    } catch {
+      setHistoryError("更早的冒險紀錄暫時載入失敗，已載入的歷史不受影響，請稍後再試。");
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   if (loading) {
     return <div className="p-6 text-center text-lg text-gray-700 bg-white/90 rounded-lg shadow-lg max-w-2xl mx-auto mt-6">正在整理你的冒險故事…</div>;
@@ -92,7 +130,7 @@ export default function RecordsPanel() {
         <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
           <div>
             <h2 className="text-2xl font-black text-yellow-950">🏆 我的冒險成就</h2>
-            <div className="text-sm text-yellow-800 mt-1">從第一次森林冒險到現在，完成過的正式戰鬥都算在這裡。</div>
+            <div className="text-sm text-yellow-800 mt-1">從第一次森林冒險到現在，完成過的正式戰鬥都永久算在這裡。</div>
           </div>
           <div className="font-black text-violet-800">Lv.{Number(progress?.level || 1)}</div>
         </div>
@@ -106,9 +144,9 @@ export default function RecordsPanel() {
           <div className="rounded-xl bg-white p-3"><div className="text-xs text-slate-500">歷史答題正確率</div><div className="text-xl font-black">{summary.accuracy}%</div></div>
           <div className="rounded-xl bg-white p-3"><div className="text-xs text-slate-500">歷史獲得 EXP</div><div className="text-xl font-black">+{summary.exp}</div></div>
         </div>
-        {!lifetimeAvailable && (
+        {!historyAvailable && (
           <div className="mt-3 rounded-xl bg-amber-50 border border-amber-300 p-3 text-sm font-bold text-amber-900">
-            完整歷史目前暫時無法讀取，下面只顯示近期紀錄；不要把這個數字當成總成就。
+            {historyError || "完整歷史目前暫時無法讀取；不要把近期數字當成總成就。"}
           </div>
         )}
       </section>
@@ -141,37 +179,62 @@ export default function RecordsPanel() {
       <section className="p-5 bg-white/95 rounded-2xl shadow-xl border border-yellow-300">
         <div className="mb-4">
           <h2 className="text-2xl font-bold text-yellow-900">📖 完整森林戰鬥紀錄</h2>
-          <div className="text-sm text-yellow-800 mt-1">已完成並成功結算的正式戰鬥，從最新一路看到最早。</div>
+          <div className="text-sm text-yellow-800 mt-1">紀錄永久保存；畫面分批載入，可以一路看到第一次森林冒險。</div>
         </div>
 
         {battles.length === 0 ? (
           <div className="p-5 text-center text-gray-700">📝 尚無完成的森林戰鬥紀錄</div>
         ) : (
-          <ul className="space-y-3 max-h-[720px] overflow-y-auto pr-2">
-            {battles.map((battle) => {
-              const questions = Number(battle.questionCount || 0);
-              const correct = Number(battle.correctCount || 0);
-              const accuracy = questions > 0 ? Math.round((correct / questions) * 100) : 0;
-              const won = battle.outcome === "victory";
-              const isBoss = battle.monsterTier === "boss";
-              return (
-                <li key={battle.sessionKey} className={`bg-white p-4 rounded-xl shadow border ${isBoss ? "border-amber-400 ring-1 ring-amber-200" : "border-yellow-200"}`}>
-                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                    <div className={`font-bold text-lg ${isBoss ? "text-amber-900" : "text-slate-800"}`}>
-                      {won ? "🏆 勝利" : "💥 戰敗"} · {isBoss ? "🐉 " : ""}{TIER_LABELS[battle.monsterTier] || battle.monsterTier}
+          <>
+            <ul className="space-y-3 max-h-[720px] overflow-y-auto pr-2">
+              {battles.map((battle) => {
+                const questions = Number(battle.questionCount || 0);
+                const correct = Number(battle.correctCount || 0);
+                const accuracy = questions > 0 ? Math.round((correct / questions) * 100) : 0;
+                const won = battle.outcome === "victory";
+                const isBoss = battle.monsterTier === "boss";
+                return (
+                  <li key={battle.sessionKey} className={`bg-white p-4 rounded-xl shadow border ${isBoss ? "border-amber-400 ring-1 ring-amber-200" : "border-yellow-200"}`}>
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                      <div className={`font-bold text-lg ${isBoss ? "text-amber-900" : "text-slate-800"}`}>
+                        {won ? "🏆 勝利" : "💥 戰敗"} · {isBoss ? "🐉 " : ""}{TIER_LABELS[battle.monsterTier] || battle.monsterTier}
+                      </div>
+                      <div className="text-sm text-slate-500">🕒 {formatTime(battle.completedAt)}</div>
                     </div>
-                    <div className="text-sm text-slate-500">🕒 {formatTime(battle.completedAt)}</div>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-                    <div className="rounded-lg bg-blue-50 p-2"><div className="text-xs text-slate-500">答對</div><div className="font-bold">{correct}/{questions}</div></div>
-                    <div className="rounded-lg bg-emerald-50 p-2"><div className="text-xs text-slate-500">正確率</div><div className="font-bold">{accuracy}%</div></div>
-                    <div className="rounded-lg bg-amber-50 p-2"><div className="text-xs text-slate-500">獲得 EXP</div><div className="font-bold">+{Number(battle.earnedExp || 0)}</div></div>
-                    <div className="rounded-lg bg-violet-50 p-2"><div className="text-xs text-slate-500">等級</div><div className="font-bold">Lv.{battle.levelBefore} → {battle.levelAfter}</div></div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                      <div className="rounded-lg bg-blue-50 p-2"><div className="text-xs text-slate-500">答對</div><div className="font-bold">{correct}/{questions}</div></div>
+                      <div className="rounded-lg bg-emerald-50 p-2"><div className="text-xs text-slate-500">正確率</div><div className="font-bold">{accuracy}%</div></div>
+                      <div className="rounded-lg bg-amber-50 p-2"><div className="text-xs text-slate-500">獲得 EXP</div><div className="font-bold">+{Number(battle.earnedExp || 0)}</div></div>
+                      <div className="rounded-lg bg-violet-50 p-2"><div className="text-xs text-slate-500">等級</div><div className="font-bold">Lv.{battle.levelBefore} → {battle.levelAfter}</div></div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+
+            {historyAvailable && battlePage?.hasMore && (
+              <button
+                type="button"
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="mt-4 w-full min-h-[52px] rounded-xl bg-yellow-500 text-yellow-950 font-black text-lg disabled:opacity-50"
+              >
+                {loadingMore ? "正在翻找更早的冒險…" : "📜 載入更早的冒險紀錄"}
+              </button>
+            )}
+
+            {historyAvailable && !battlePage?.hasMore && (
+              <div className="mt-4 rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-center font-bold text-emerald-800">
+                ✨ 已經看到第一次森林冒險了
+              </div>
+            )}
+
+            {historyError && historyAvailable && (
+              <div className="mt-3 rounded-xl bg-amber-50 border border-amber-300 p-3 text-sm font-bold text-amber-900">
+                {historyError}
+              </div>
+            )}
+          </>
         )}
       </section>
     </div>
