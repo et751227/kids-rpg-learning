@@ -1,11 +1,8 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import RecordsPanel from "../components/RecordsPanel";
-import VocabularyManager from "../components/VocabularyManager";
 
 export default function RecordsPage() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState("records");
 
   return (
     <div
@@ -22,23 +19,8 @@ export default function RecordsPage() {
         <div className="w-[84px]" />
       </div>
 
-      <div className="flex gap-2 mb-5 bg-black/45 rounded-2xl p-2">
-        <button
-          onClick={() => setTab("records")}
-          className={`px-5 py-3 rounded-xl font-bold ${tab === "records" ? "bg-yellow-300 text-slate-900" : "bg-white/85 text-slate-700"}`}
-        >
-          📖 我的紀錄
-        </button>
-        <button
-          onClick={() => setTab("vocabulary")}
-          className={`px-5 py-3 rounded-xl font-bold ${tab === "vocabulary" ? "bg-yellow-300 text-slate-900" : "bg-white/85 text-slate-700"}`}
-        >
-          🧾 題庫管理
-        </button>
-      </div>
-
       <div className="w-full">
-        {tab === "records" ? <RecordsPanel /> : <VocabularyManager />}
+        <RecordsPanel />
       </div>
     </div>
   );
