@@ -7,6 +7,11 @@ const STATE_LABELS = {
   watch: "持續觀察",
 };
 
+const MODE_LABELS = {
+  practice: "Village",
+  challenge: "Forest",
+};
+
 const formatTime = (value) => {
   if (!value) return "—";
   const date = new Date(value);
@@ -85,6 +90,7 @@ export default function ParentDashboard() {
   const battles = Array.isArray(progress?.recentBattles) ? progress.recentBattles : [];
   const weaknessAvailable = progress?.wordWeakness !== null && progress?.wordWeakness !== undefined;
   const weaknessWords = Array.isArray(progress?.wordWeakness?.words) ? progress.wordWeakness.words : [];
+  const recentWrongAttempts = Array.isArray(progress?.wordWeakness?.recentWrongAttempts) ? progress.wordWeakness.recentWrongAttempts : [];
   const modeSummary = progress?.wordWeakness?.modeSummary || null;
 
   const summary = useMemo(() => {
@@ -154,6 +160,46 @@ export default function ParentDashboard() {
           <Metric label="近期答題" value={summary.questions} />
           <Metric label="近期正確率" value={`${summary.accuracy}%`} />
           <Metric label="近期獲得 EXP" value={`+${summary.exp}`} />
+        </section>
+
+        <section className="rounded-2xl bg-white border border-slate-200 p-5 shadow-sm">
+          <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
+            <div>
+              <h2 className="text-2xl font-black">最近答錯明細</h2>
+              <p className="mt-1 text-sm text-slate-500">用來核對孩子實際輸入與系統答案；這裡不會改變判定或 EXP。</p>
+            </div>
+          </div>
+
+          {!weaknessAvailable ? (
+            <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-amber-800">答題明細目前暫時無法讀取。</div>
+          ) : recentWrongAttempts.length === 0 ? (
+            <div className="rounded-xl bg-emerald-50 p-5 text-center text-emerald-800">目前沒有近期答錯紀錄。</div>
+          ) : (
+            <div className="overflow-x-auto max-h-[520px] overflow-y-auto">
+              <table className="min-w-full text-left text-sm">
+                <thead className="sticky top-0 bg-slate-100 text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3">時間</th>
+                    <th className="px-4 py-3">題目</th>
+                    <th className="px-4 py-3">孩子輸入</th>
+                    <th className="px-4 py-3">系統答案</th>
+                    <th className="px-4 py-3">模式</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {recentWrongAttempts.map((attempt) => (
+                    <tr key={attempt.attemptId} className="align-top">
+                      <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{formatTime(attempt.answeredAt)}</td>
+                      <td className="px-4 py-3 font-semibold">{attempt.chinese || "—"}</td>
+                      <td className="px-4 py-3"><code className="rounded bg-red-50 px-2 py-1 font-bold text-red-800">{attempt.submittedAnswer || "(空白)"}</code></td>
+                      <td className="px-4 py-3"><code className="rounded bg-emerald-50 px-2 py-1 font-bold text-emerald-800">{attempt.correctAnswer || "—"}</code></td>
+                      <td className="px-4 py-3">{MODE_LABELS[attempt.mode] || attempt.mode || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
 
         <section className="rounded-2xl bg-white border border-slate-200 p-5 shadow-sm">
