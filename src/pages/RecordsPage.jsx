@@ -13,9 +13,10 @@ export default function RecordsPage() {
         <button onClick={() => navigate("/")} className="px-4 py-2 rounded-xl bg-slate-800/85 text-white font-bold shadow">
           ← 回地圖
         </button>
-        <h1 className="text-3xl md:text-4xl font-bold text-white bg-black/55 px-6 py-3 rounded-xl shadow">
-          🏰 CASTLE · 我的冒險紀錄
-        </h1>
+        <div className="text-center text-white bg-black/55 px-6 py-3 rounded-xl shadow">
+          <h1 className="text-3xl md:text-4xl font-black">🏰 CASTLE · 我的冒險城堡</h1>
+          <p className="mt-1 text-sm md:text-base text-amber-100 font-bold">這裡收藏我一路冒險留下來的故事</p>
+        </div>
         <div className="w-[84px]" />
       </div>
 
