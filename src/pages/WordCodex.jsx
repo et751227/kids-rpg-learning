@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import WorldBackButton from "../components/WorldBackButton";
 import { learningApi } from "../api/learningClient";
+import { getWordBelonging, presentCollection } from "../game/codexPresentation";
 
 export default function WordCodex() {
   const [data, setData] = useState(null);
@@ -23,8 +24,12 @@ export default function WordCodex() {
     return list;
   }, [data, filter]);
 
+  const collections = useMemo(
+    () => (data?.collections || []).map((collection) => presentCollection(collection)),
+    [data],
+  );
+
   const tranche = data?.tranche;
-  const collections = data?.collections || [];
   const encounteredCount = tranche?.discoveredCount ?? tranche?.unlockedCount ?? 0;
   const exploredCount = tranche?.learningPoolCount ?? 0;
   const totalCount = tranche?.target ?? 0;
@@ -75,9 +80,12 @@ export default function WordCodex() {
 
         {collections.length > 0 && (
           <section className="grid gap-3">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-2xl font-black">🏅 收藏套組</h2>
-              <div className="text-sm text-indigo-200">點勳章查看組成；沒遇見的單字仍保持鎖定</div>
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 className="text-2xl font-black">🏅 收藏套組</h2>
+                <div className="text-sm text-indigo-200 mt-1">每個單字都有自己的歸屬；集齊特別套組，會得到專屬徽章。</div>
+              </div>
+              <div className="text-sm text-indigo-200">點收藏查看組成；沒遇見的單字仍保持鎖定</div>
             </div>
             <div className="grid md:grid-cols-2 gap-3">
               {collections.map((collection) => {
@@ -179,7 +187,7 @@ export default function WordCodex() {
                     <div className="text-3xl mb-1">✨</div>
                     <div className="text-xl md:text-2xl font-black break-words">{item.word}</div>
                     <div className="mt-1 text-base font-bold text-indigo-700">{item.chinese}</div>
-                    <div className="mt-2 text-xs text-slate-500">{item.category || "word"}</div>
+                    <div className="mt-2 rounded-full bg-indigo-100 px-3 py-1 text-xs font-black text-indigo-700">{getWordBelonging(item.category)}</div>
                   </>
                 ) : (
                   <>
