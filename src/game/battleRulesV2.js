@@ -3,28 +3,39 @@ export const BASE_STATS = { strength: 1, vitality: 1, agility: 1 };
 export const MONSTER_DAMAGE_SCALE = 3;
 
 export const MONSTER_TIERS = {
-  normal: {
-    key: "normal",
-    label: "一般怪",
-    icon: "👾",
-    hpMultiplier: 1,
-    attackMultiplier: 1,
-  },
-  elite: {
-    key: "elite",
-    label: "菁英怪",
-    icon: "👹",
-    hpMultiplier: 1.7,
-    attackMultiplier: 1.2,
-  },
-  boss: {
-    key: "boss",
-    label: "BOSS",
-    icon: "🐉",
-    hpMultiplier: 2.5,
-    attackMultiplier: 1.25,
-  },
+  normal: { key: "normal", label: "一般怪", icon: "👾", hpMultiplier: 1, attackMultiplier: 1 },
+  elite: { key: "elite", label: "菁英怪", icon: "👹", hpMultiplier: 1.7, attackMultiplier: 1.2 },
+  boss: { key: "boss", label: "BOSS", icon: "🐉", hpMultiplier: 2.5, attackMultiplier: 1.25 },
 };
+
+export const MONSTER_ARCHETYPES = {
+  wolf: { key: "wolf", tiers: ["normal"], label: "連擊狼", icon: "🐺", trait: "連擊越長，攻擊越有利；第一擊較弱。", mastery: "維持連擊來證明你掌握節奏" },
+  ghost: { key: "ghost", tiers: ["normal"], label: "回聲幽靈", icon: "👻", trait: "慢速回答會被削弱，專注與速度更重要。", mastery: "至少一半答對題要達成快速攻擊" },
+  golem: { key: "golem", tiers: ["elite"], label: "鐵壁巨像", icon: "🗿", trait: "前兩次正確攻擊會被護盾減傷。", mastery: "最多只能失誤一次" },
+  serpent: { key: "serpent", tiers: ["elite"], label: "毒牙巨蛇", icon: "🐍", trait: "答錯時承受的傷害更高。", mastery: "正確率至少 90%" },
+  dragon: { key: "dragon", tiers: ["boss"], label: "王者巨龍", icon: "🐉", trait: "前兩擊有護盾，低血量後進入狂暴。", mastery: "正確率 90% 並維持連擊" },
+};
+
+const ARCHETYPES_BY_TIER = {
+  normal: ["wolf", "ghost"],
+  elite: ["golem", "serpent"],
+  boss: ["dragon"],
+};
+
+function fnv1a32(input) {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < input.length; i += 1) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash >>> 0;
+}
+
+export function monsterArchetypeForSession(sessionKey, tierKey) {
+  const options = ARCHETYPES_BY_TIER[tierKey] || ARCHETYPES_BY_TIER.normal;
+  const key = options[fnv1a32(`kids-monster-archetype-v1:${sessionKey}:${tierKey}`) % options.length];
+  return MONSTER_ARCHETYPES[key];
+}
 
 export function monsterTierForRoll(roll) {
   const value = Math.min(0.999999, Math.max(0, Number(roll) || 0));
@@ -42,10 +53,7 @@ export function availableStatPoints(level) {
 }
 
 export function allocatedPoints(stats) {
-  return ["strength", "vitality", "agility"].reduce(
-    (sum, key) => sum + Math.max(0, Number(stats?.[key] || 1) - 1),
-    0,
-  );
+  return ["strength", "vitality", "agility"].reduce((sum, key) => sum + Math.max(0, Number(stats?.[key] || 1) - 1), 0);
 }
 
 export function remainingStatPoints(level, stats) {
@@ -90,13 +98,7 @@ export function evadeChance(agility) {
 }
 
 export function deterministicEvadeRoll(sessionKey, attemptId) {
-  const input = `kids-battle-evade-v1:${sessionKey}:${attemptId}`;
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < input.length; i += 1) {
-    hash ^= input.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return hash / 0x100000000;
+  return fnv1a32(`kids-battle-evade-v1:${sessionKey}:${attemptId}`) / 0x100000000;
 }
 
 export function didEvade(sessionKey, attemptId, agility, correct) {
@@ -104,9 +106,12 @@ export function didEvade(sessionKey, attemptId, agility, correct) {
   return deterministicEvadeRoll(sessionKey, attemptId) < evadeChance(agility);
 }
 
-export function receivedMonsterDamage(level, vitality, tier = MONSTER_TIERS.normal, correct = false, evaded = false) {
+export function receivedMonsterDamage(level, vitality, tier = MONSTER_TIERS.normal, correct = false, evaded = false, archetype = null, monsterHpRatio = 1) {
   if (correct || evaded) return 0;
-  return Math.max(1, Math.round(monsterDamage(level, tier) * (1 - damageReduction(vitality))));
+  let multiplier = 1;
+  if (archetype?.key === "serpent") multiplier *= 1.35;
+  if (archetype?.key === "dragon" && monsterHpRatio <= 0.35) multiplier *= 1.4;
+  return Math.max(1, Math.round(monsterDamage(level, tier) * (1 - damageReduction(vitality)) * multiplier));
 }
 
 export function timingThresholds(agility) {
@@ -117,25 +122,44 @@ export function timingThresholds(agility) {
   };
 }
 
-export function attackResult({ level, strength, agility, responseTimeMs, correct, streak = 1 }) {
-  if (!correct) return { damage: 0, grade: "miss", multiplier: 0, comboMultiplier: 1 };
-
+export function attackResult({ level, strength, agility, responseTimeMs, correct, streak = 1, archetype = null, correctHitIndex = 1 }) {
+  if (!correct) return { damage: 0, grade: "miss", multiplier: 0, comboMultiplier: 1, archetypeMultiplier: 1 };
   const { fastMs, normalMs } = timingThresholds(agility);
-
   let grade = "slow";
   let multiplier = 0.8;
-  if (responseTimeMs <= fastMs) {
-    grade = "fast";
-    multiplier = 1.35;
-  } else if (responseTimeMs <= normalMs) {
-    grade = "normal";
-    multiplier = 1;
-  }
+  if (responseTimeMs <= fastMs) { grade = "fast"; multiplier = 1.35; }
+  else if (responseTimeMs <= normalMs) { grade = "normal"; multiplier = 1; }
   const combo = comboMultiplier(streak);
+  let archetypeMultiplier = 1;
+  if (archetype?.key === "wolf") archetypeMultiplier = streak >= 2 ? 1.15 : 0.8;
+  if (archetype?.key === "ghost" && responseTimeMs > normalMs) archetypeMultiplier = 0.65;
+  if (archetype?.key === "golem" && correctHitIndex <= 2) archetypeMultiplier = 0.55;
+  if (archetype?.key === "dragon" && correctHitIndex <= 2) archetypeMultiplier = 0.7;
   return {
-    damage: Math.max(1, Math.round(baseAttack(level, strength) * multiplier * combo)),
+    damage: Math.max(1, Math.round(baseAttack(level, strength) * multiplier * combo * archetypeMultiplier)),
     grade,
     multiplier,
     comboMultiplier: combo,
+    archetypeMultiplier,
   };
+}
+
+export function masteryPreview({ outcome, archetype, questionCount, correctCount, maxCombo, fastCorrectCount }) {
+  const accuracy = questionCount > 0 ? correctCount / questionCount : 0;
+  const wrongCount = Math.max(0, questionCount - correctCount);
+  if (outcome !== "victory") return { stars: 0, perfect: false, accuracy: Math.round(accuracy * 100) };
+  let stars = 1;
+  const secondStar = archetype?.key === "wolf"
+    ? maxCombo >= Math.min(3, questionCount)
+    : archetype?.key === "ghost"
+      ? fastCorrectCount >= Math.max(1, Math.ceil(correctCount / 2))
+      : archetype?.key === "golem"
+        ? wrongCount <= 1
+        : archetype?.key === "serpent"
+          ? accuracy >= 0.9
+          : accuracy >= 0.9 && maxCombo >= Math.min(3, questionCount);
+  if (secondStar) stars = 2;
+  const perfect = wrongCount === 0;
+  if (perfect) stars = 3;
+  return { stars, perfect, accuracy: Math.round(accuracy * 100) };
 }
