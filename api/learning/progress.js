@@ -11,10 +11,17 @@ function normalizeBattle(battle) {
   return {
     sessionKey: battle.sessionKey,
     monsterTier: battle.monsterTier,
+    monsterArchetype: battle.monsterArchetype || null,
     outcome: battle.outcome,
     questionCount: Number(battle.questionCount || 0),
     correctCount: Number(battle.correctCount || 0),
     wrongCount: Number(battle.wrongCount || 0),
+    mastery: battle.mastery ? {
+      stars: Number(battle.mastery.stars || 0),
+      perfect: Boolean(battle.mastery.perfect),
+      accuracy: Number(battle.mastery.accuracy || 0),
+      maxCombo: Number(battle.mastery.maxCombo || 0),
+    } : null,
     earnedExp: Number(battle.exp?.earned || 0),
     levelBefore: Number(battle.level?.before || 1),
     levelAfter: Number(battle.level?.after || 1),
@@ -79,10 +86,7 @@ module.exports = async function handler(req, res) {
       console.warn("learning weakness read model request failed", { message: error?.message || "unknown" });
     }
 
-    return res.status(200).json({
-      ...progress.payload,
-      wordWeakness,
-    });
+    return res.status(200).json({ ...progress.payload, wordWeakness });
   } catch (error) {
     console.error("learning progress proxy failed", error);
     return res.status(502).json({ error: "learning_upstream_unavailable" });
