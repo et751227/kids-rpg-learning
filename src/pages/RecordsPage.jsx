@@ -14,7 +14,7 @@ export default function RecordsPage() {
           ← 回地圖
         </button>
         <h1 className="text-3xl md:text-4xl font-bold text-white bg-black/55 px-6 py-3 rounded-xl shadow">
-          🏰 Castle 學習中心
+          🏰 CASTLE · 我的冒險紀錄
         </h1>
         <div className="w-[84px]" />
       </div>
