@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { learningApi } from "../api/learningClient";
+import { MONSTER_ARCHETYPES } from "../game/battleRulesV2";
 
 const TIER_LABELS = {
   normal: "一般怪",
@@ -179,7 +180,7 @@ export default function RecordsPanel() {
       <section className="p-5 bg-white/95 rounded-2xl shadow-xl border border-yellow-300">
         <div className="mb-4">
           <h2 className="text-2xl font-bold text-yellow-900">📖 完整森林戰鬥紀錄</h2>
-          <div className="text-sm text-yellow-800 mt-1">紀錄永久保存；畫面分批載入，可以一路看到第一次森林冒險。</div>
+          <div className="text-sm text-yellow-800 mt-1">紀錄永久保存；新型怪物的特性與 Mastery 星級也會一起留下。</div>
         </div>
 
         {battles.length === 0 ? (
@@ -193,14 +194,22 @@ export default function RecordsPanel() {
                 const accuracy = questions > 0 ? Math.round((correct / questions) * 100) : 0;
                 const won = battle.outcome === "victory";
                 const isBoss = battle.monsterTier === "boss";
+                const archetype = battle.monsterArchetype ? MONSTER_ARCHETYPES[battle.monsterArchetype] : null;
+                const stars = Number(battle.mastery?.stars || 0);
                 return (
                   <li key={battle.sessionKey} className={`bg-white p-4 rounded-xl shadow border ${isBoss ? "border-amber-400 ring-1 ring-amber-200" : "border-yellow-200"}`}>
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                       <div className={`font-bold text-lg ${isBoss ? "text-amber-900" : "text-slate-800"}`}>
-                        {won ? "🏆 勝利" : "💥 戰敗"} · {isBoss ? "🐉 " : ""}{TIER_LABELS[battle.monsterTier] || battle.monsterTier}
+                        {won ? "🏆 勝利" : "💥 戰敗"} · {archetype ? `${archetype.icon} ${archetype.label}` : `${isBoss ? "🐉 " : ""}${TIER_LABELS[battle.monsterTier] || battle.monsterTier}`}
                       </div>
                       <div className="text-sm text-slate-500">🕒 {formatTime(battle.completedAt)}</div>
                     </div>
+                    {battle.mastery && (
+                      <div className="mb-3 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 flex flex-wrap items-center justify-between gap-2">
+                        <div className="font-black text-amber-900">{"⭐".repeat(stars)}{"☆".repeat(Math.max(0, 3 - stars))} Mastery</div>
+                        <div className="text-xs font-bold text-amber-800">{battle.mastery.perfect ? "PERFECT" : `最高 Combo ${Number(battle.mastery.maxCombo || 0)}`}</div>
+                      </div>
+                    )}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
                       <div className="rounded-lg bg-blue-50 p-2"><div className="text-xs text-slate-500">答對</div><div className="font-bold">{correct}/{questions}</div></div>
                       <div className="rounded-lg bg-emerald-50 p-2"><div className="text-xs text-slate-500">正確率</div><div className="font-bold">{accuracy}%</div></div>

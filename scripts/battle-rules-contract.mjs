@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  MONSTER_ARCHETYPES,
   MONSTER_DAMAGE_SCALE,
   MONSTER_TIERS,
   attackResult,
@@ -9,6 +10,8 @@ import {
   deterministicEvadeRoll,
   didEvade,
   evadeChance,
+  masteryPreview,
+  monsterArchetypeForSession,
   monsterDamage,
   monsterMaxHp,
   monsterTierForRoll,
@@ -30,6 +33,7 @@ assert.equal(MONSTER_TIERS.boss.hpMultiplier, 2.5);
 assert.equal(MONSTER_TIERS.normal.attackMultiplier, 1);
 assert.equal(MONSTER_TIERS.elite.attackMultiplier, 1.2);
 assert.equal(MONSTER_TIERS.boss.attackMultiplier, 1.25);
+assert.equal(Object.keys(MONSTER_ARCHETYPES).length, 5);
 
 const level = 10;
 const normalHp = monsterMaxHp(level, MONSTER_TIERS.normal);
@@ -53,14 +57,14 @@ assert.equal(comboMultiplier(99), 1.4);
 assert.equal(baseAttack(10, 1), 13.7);
 const lv10Fast = attackResult({ level: 10, strength: 1, agility: 1, responseTimeMs: 1000, correct: true });
 const lv20Fast = attackResult({ level: 20, strength: 1, agility: 1, responseTimeMs: 1000, correct: true });
-assert.ok(lv20Fast.damage > lv10Fast.damage, "level must contribute offense");
+assert.ok(lv20Fast.damage > lv10Fast.damage);
 const combo3 = attackResult({ level: 10, strength: 1, agility: 1, responseTimeMs: 1000, correct: true, streak: 3 });
 const combo10 = attackResult({ level: 10, strength: 1, agility: 1, responseTimeMs: 1000, correct: true, streak: 10 });
-assert.ok(combo3.damage > lv10Fast.damage, "3 correct answers must begin combo bonus");
-assert.ok(combo10.damage > combo3.damage, "longer combo must increase damage up to cap");
+assert.ok(combo3.damage > lv10Fast.damage);
+assert.ok(combo10.damage > combo3.damage);
 
-assert.equal(receivedMonsterDamage(level, 1, MONSTER_TIERS.normal, true), 0, "correct answer must prevent attack");
-assert.ok(receivedMonsterDamage(level, 20, MONSTER_TIERS.normal, false) < normalDamage, "VIT must mitigate wrong-answer damage");
+assert.equal(receivedMonsterDamage(level, 1, MONSTER_TIERS.normal, true), 0);
+assert.ok(receivedMonsterDamage(level, 20, MONSTER_TIERS.normal, false) < normalDamage);
 assert.ok(damageReduction(20) > damageReduction(10));
 assert.ok(damageReduction(30) < 0.3);
 
@@ -79,6 +83,38 @@ const attemptId = "attempt-001";
 assert.equal(deterministicEvadeRoll(sessionKey, attemptId), deterministicEvadeRoll(sessionKey, attemptId));
 assert.equal(didEvade(sessionKey, attemptId, 1, false), false);
 assert.equal(didEvade(sessionKey, attemptId, 30, true), false);
-assert.equal(receivedMonsterDamage(level, 1, MONSTER_TIERS.normal, false, true), 0, "evade must prevent wrong-answer damage");
+assert.equal(receivedMonsterDamage(level, 1, MONSTER_TIERS.normal, false, true), 0);
+
+const normalArchetype = monsterArchetypeForSession(sessionKey, "normal");
+assert.ok(["wolf", "ghost"].includes(normalArchetype.key));
+assert.equal(monsterArchetypeForSession(sessionKey, "boss").key, "dragon");
+
+const wolf = MONSTER_ARCHETYPES.wolf;
+const wolfFirst = attackResult({ level, strength: 4, agility: 4, responseTimeMs: 3000, correct: true, streak: 1, archetype: wolf, correctHitIndex: 1 });
+const wolfCombo = attackResult({ level, strength: 4, agility: 4, responseTimeMs: 3000, correct: true, streak: 3, archetype: wolf, correctHitIndex: 3 });
+assert.ok(wolfCombo.damage > wolfFirst.damage);
+
+const golem = MONSTER_ARCHETYPES.golem;
+const golemShield = attackResult({ level, strength: 4, agility: 4, responseTimeMs: 3000, correct: true, streak: 2, archetype: golem, correctHitIndex: 1 });
+const golemOpen = attackResult({ level, strength: 4, agility: 4, responseTimeMs: 3000, correct: true, streak: 2, archetype: golem, correctHitIndex: 3 });
+assert.ok(golemOpen.damage > golemShield.damage);
+
+const serpent = MONSTER_ARCHETYPES.serpent;
+assert.ok(
+  receivedMonsterDamage(level, 1, MONSTER_TIERS.elite, false, false, serpent, 1) >
+  receivedMonsterDamage(level, 1, MONSTER_TIERS.elite, false, false, golem, 1),
+);
+
+const dragon = MONSTER_ARCHETYPES.dragon;
+assert.ok(
+  receivedMonsterDamage(level, 1, MONSTER_TIERS.boss, false, false, dragon, 0.3) >
+  receivedMonsterDamage(level, 1, MONSTER_TIERS.boss, false, false, dragon, 0.7),
+);
+
+const perfect = masteryPreview({ outcome: "victory", archetype: serpent, questionCount: 4, correctCount: 4, maxCombo: 4, fastCorrectCount: 4 });
+assert.equal(perfect.stars, 3);
+assert.equal(perfect.perfect, true);
+const defeated = masteryPreview({ outcome: "defeat", archetype: dragon, questionCount: 4, correctCount: 2, maxCombo: 1, fastCorrectCount: 1 });
+assert.equal(defeated.stars, 0);
 
 console.log("battle_rules_contract=PASS");
