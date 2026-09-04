@@ -25,12 +25,10 @@ export default function WordCodex() {
 
   const tranche = data?.tranche;
   const collections = data?.collections || [];
-  const discoveredCount = tranche?.discoveredCount ?? tranche?.unlockedCount ?? 0;
-  const learningPoolCount = tranche?.learningPoolCount ?? 0;
-  const undiscoveredLearningPoolCount = tranche?.undiscoveredLearningPoolCount ?? Math.max(0, learningPoolCount - discoveredCount);
-  const villageAvailableCount = tranche?.villageAvailableCount;
-  const forestAvailableCount = tranche?.forestAvailableCount;
-  const progress = tranche ? Math.min(100, (discoveredCount / Math.max(1, tranche.target)) * 100) : 0;
+  const encounteredCount = tranche?.discoveredCount ?? tranche?.unlockedCount ?? 0;
+  const exploredCount = tranche?.learningPoolCount ?? 0;
+  const totalCount = tranche?.target ?? 0;
+  const progress = totalCount > 0 ? Math.min(100, (encounteredCount / totalCount) * 100) : 0;
 
   if (error) {
     return <div className="min-h-screen bg-slate-950 text-white p-6"><WorldBackButton /><div className="mt-10 text-center text-xl">{error}</div></div>;
@@ -46,43 +44,33 @@ export default function WordCodex() {
           <WorldBackButton />
           <div className="text-center flex-1">
             <h1 className="text-3xl md:text-4xl font-black">📖 魔法單字圖鑑</h1>
-            <p className="text-indigo-200 mt-1">在村莊或森林真正遇見，才會揭開圖鑑</p>
+            <p className="text-indigo-200 mt-1">探索新單字，再到村莊或森林與它對決</p>
           </div>
           <div className="w-[110px]" />
         </div>
 
         <section className="rounded-2xl bg-white/10 border border-white/15 p-4 md:p-5 shadow-xl">
-          <div>
-            <div className="text-3xl font-black text-amber-300">✨ {discoveredCount} / {tranche.target}</div>
-            <div className="text-sm text-slate-300 mt-1">已發現單字 / 第一階段 300 字</div>
-            {typeof tranche.learningPoolCount === "number" ? (
-              <div className="text-xs text-indigo-200 mt-2">目前已有 {tranche.learningPoolCount} 個單字進入村莊／森林題庫</div>
-            ) : null}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="rounded-xl bg-black/25 border border-white/10 p-4 text-center">
+              <div className="text-4xl font-black text-slate-100">{totalCount}</div>
+              <div className="text-sm font-black mt-2">總字詞</div>
+            </div>
+            <div className="rounded-xl bg-black/25 border border-white/10 p-4 text-center">
+              <div className="text-4xl font-black text-violet-300">{exploredCount}</div>
+              <div className="text-sm font-black mt-2">已探索字詞</div>
+            </div>
+            <div className="rounded-xl bg-black/25 border border-white/10 p-4 text-center">
+              <div className="text-4xl font-black text-amber-300">{encounteredCount}</div>
+              <div className="text-sm font-black mt-2">已對決字詞</div>
+            </div>
           </div>
-          <div className="h-4 bg-black/40 rounded-full overflow-hidden mt-4 border border-white/10">
+          <div className="mt-4 flex items-center justify-between gap-3 text-sm font-bold text-indigo-100">
+            <span>圖鑑進度</span>
+            <span>{encounteredCount} / {totalCount}</span>
+          </div>
+          <div className="h-4 bg-black/40 rounded-full overflow-hidden mt-2 border border-white/10">
             <div className="h-full bg-amber-400 transition-all" style={{ width: `${progress}%` }} />
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
-            <div className="rounded-xl bg-black/25 border border-white/10 p-3 text-center">
-              <div className="text-3xl font-black text-amber-200">{undiscoveredLearningPoolCount}</div>
-              <div className="text-sm font-bold mt-1">還沒發現</div>
-              <div className="text-xs text-slate-400 mt-1">已在學習題庫裡</div>
-            </div>
-            <div className="rounded-xl bg-black/25 border border-white/10 p-3 text-center">
-              <div className="text-3xl font-black text-emerald-300">{typeof villageAvailableCount === "number" ? villageAvailableCount : "—"}</div>
-              <div className="text-sm font-bold mt-1">🏡 村莊可遇見</div>
-              <div className="text-xs text-slate-400 mt-1">尚未揭開的村莊單字</div>
-            </div>
-            <div className="rounded-xl bg-black/25 border border-white/10 p-3 text-center">
-              <div className="text-3xl font-black text-violet-300">{typeof forestAvailableCount === "number" ? forestAvailableCount : "—"}</div>
-              <div className="text-sm font-bold mt-1">🌲 森林可遇見</div>
-              <div className="text-xs text-slate-400 mt-1">尚未揭開的森林單字</div>
-            </div>
-          </div>
-          {typeof villageAvailableCount === "number" && typeof forestAvailableCount === "number" ? (
-            <div className="text-xs text-slate-400 text-center mt-3">同一個單字可能同時在村莊和森林出現，所以兩個數字不要相加。</div>
-          ) : null}
         </section>
 
         {collections.length > 0 && (
