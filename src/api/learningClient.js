@@ -23,6 +23,8 @@ export const learningApi = {
   session: () => jsonRequest("/api/learning/session"),
   login: (accessKey) => jsonRequest("/api/learning/session", { method: "POST", body: JSON.stringify({ accessKey }) }),
   progress: () => jsonRequest("/api/learning/progress"),
+  battleHistory: ({ offset = 0, limit = 50 } = {}) =>
+    jsonRequest(`/api/learning/progress?view=battles&offset=${encodeURIComponent(offset)}&limit=${encodeURIComponent(limit)}`),
   codex: () => jsonRequest("/api/learning/codex"),
   discoveryNext: () => jsonRequest("/api/learning/discovery"),
   discoveryAttempt: async ({ attemptId, vocabularyId, submittedAnswer, responseTimeMs }) => {
