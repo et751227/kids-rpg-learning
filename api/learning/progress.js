@@ -1,4 +1,10 @@
-const { noStore, playerId, requireSession, upstream } = require("../../server/learning-proxy.cjs");
+const {
+  noStore,
+  playerId,
+  upstream,
+  verifyAdminSession,
+  verifySession,
+} = require("../../server/learning-proxy.cjs");
 
 module.exports = async function handler(req, res) {
   noStore(res);
@@ -6,11 +12,31 @@ module.exports = async function handler(req, res) {
     res.setHeader("Allow", "GET");
     return res.status(405).json({ error: "method_not_allowed" });
   }
-  if (!requireSession(req, res)) return;
+
+  if (!verifySession(req) && !verifyAdminSession(req)) {
+    return res.status(401).json({ error: "learning_session_required" });
+  }
 
   try {
-    const result = await upstream(`/v1/players/${encodeURIComponent(playerId())}/progress`);
-    return res.status(result.status).json(result.payload);
+    const encodedPlayerId = encodeURIComponent(playerId());
+    const progress = await upstream(`/v1/players/${encodedPlayerId}/progress`);
+    if (progress.status < 200 || progress.status >= 300) {
+      return res.status(progress.status).json(progress.payload);
+    }
+
+    let wordWeakness = null;
+    try {
+      const weakness = await upstream(`/v1/players/${encodedPlayerId}/word-weakness`);
+      if (weakness.status >= 200 && weakness.status < 300) {
+        wordWeakness = weakness.payload;
+      } else {
+        console.warn("learning weakness read model unavailable", { status: weakness.status });
+      }
+    } catch (error) {
+      console.warn("learning weakness read model request failed", { message: error?.message || "unknown" });
+    }
+
+    return res.status(200).json({ ...progress.payload, wordWeakness });
   } catch (error) {
     console.error("learning progress proxy failed", error);
     return res.status(502).json({ error: "learning_upstream_unavailable" });
