@@ -3,6 +3,7 @@ const {
   playerId,
   upstream,
   verifyAdminSession,
+  verifyParentSession,
   verifySession,
 } = require("../../server/learning-proxy.cjs");
 
@@ -13,7 +14,7 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: "method_not_allowed" });
   }
 
-  if (!verifySession(req) && !verifyAdminSession(req)) {
+  if (!verifySession(req) && !verifyParentSession(req) && !verifyAdminSession(req)) {
     return res.status(401).json({ error: "learning_session_required" });
   }
 
