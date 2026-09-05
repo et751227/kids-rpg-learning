@@ -12,6 +12,7 @@ import {
   playerMaxHp,
   randomMonsterTier,
   receivedMonsterDamage,
+  shieldChargesRemaining,
   timingThresholds,
 } from "../game/battleRulesV2";
 
@@ -74,6 +75,19 @@ function ChallengeContent() {
   const monsterVisual = monsterVisualClasses[monsterTier.key] || monsterVisualClasses.normal;
   const battleEnded = playerHp <= 0 || monsterHp <= 0;
   const activeBattle = !loading && Boolean(question) && !battleEnded && !battleResult;
+  const shieldRemaining = shieldChargesRemaining(archetype, correctHits);
+  const monsterHpRatio = maxMonsterHp > 0 ? monsterHp / maxMonsterHp : 1;
+  const traitStateText = archetype.key === "golem"
+    ? (shieldRemaining > 0 ? `🛡️ 護盾剩 ${shieldRemaining} 層` : "💥 護盾已破除")
+    : archetype.key === "dragon"
+      ? `${shieldRemaining > 0 ? `🛡️ 護盾剩 ${shieldRemaining} 層` : "💥 護盾已破除"}${monsterHpRatio <= 0.35 ? " · 🔥 狂暴中" : ""}`
+      : archetype.key === "wolf"
+        ? (combo >= 2 ? "🔥 連擊特性已啟動" : "🐾 第一次答對攻擊較弱")
+        : archetype.key === "ghost"
+          ? "⏱️ 慢速答對會被削弱"
+          : archetype.key === "serpent"
+            ? "☠️ 答錯且未閃避會受到 +35% 傷害"
+            : "";
 
   const flashMonsterHit = () => {
     setMonsterHit(true);
@@ -239,9 +253,12 @@ function ChallengeContent() {
 
       const gradeText = attack.grade === "fast" ? "快速重擊" : attack.grade === "normal" ? "普通攻擊" : attack.grade === "slow" ? "慢速攻擊" : "沒有命中";
       const comboText = nextCombo >= 3 ? ` 🔥 ${nextCombo} COMBO ×${attack.comboMultiplier.toFixed(1)}` : "";
-      const traitText = attack.archetypeMultiplier < 1
-        ? archetype.key === "golem" || archetype.key === "dragon" ? " 🛡️ 護盾減傷！" : " 👻 特性削弱了這一擊！"
-        : attack.archetypeMultiplier > 1 ? " 🐺 連擊特性增傷！" : "";
+      const shieldText = attack.shieldApplied
+        ? attack.shieldRemaining > 0 ? ` 🛡️ 護盾減傷！剩 ${attack.shieldRemaining} 層。` : " 🛡️ 最後一層護盾破除！"
+        : "";
+      const traitText = shieldText || (attack.archetypeMultiplier < 1
+        ? archetype.key === "ghost" ? " 👻 幽靈特性削弱了慢速攻擊！" : ""
+        : attack.archetypeMultiplier > 1 ? " 🐺 連擊特性增傷！" : "");
       setFeedback(correct
         ? `✅ ${gradeText}：${attack.damage} 傷害；答對成功阻止怪物攻擊！${comboText}${traitText}`
         : evaded
@@ -309,6 +326,7 @@ function ChallengeContent() {
         <div className="rounded-xl bg-indigo-950/70 border border-indigo-300/30 px-4 py-3 text-center">
           <div className="text-xl font-black">{archetype.icon} {archetype.label} <span className="text-sm font-bold text-indigo-200">· {monsterTier.label}</span></div>
           <div className="text-sm text-indigo-100 mt-1">特性：{archetype.trait}</div>
+          {traitStateText && <div className="text-sm font-black text-amber-300 mt-2">目前狀態：{traitStateText}</div>}
           <div className="text-xs text-amber-200 mt-1">⭐ 挑戰：{archetype.mastery} · ⭐⭐⭐ Perfect</div>
         </div>
 
@@ -363,7 +381,6 @@ function ChallengeContent() {
               disabled={controlsDisabled}
               onLetter={(char) => input.length < (question?.answerLength || 0) && setInput((value) => [...value, char])}
               onBackspace={() => setInput((value) => value.slice(0, -1))}
-              onClear={() => setInput([])}
               onSubmit={submit}
             />
           </div>
