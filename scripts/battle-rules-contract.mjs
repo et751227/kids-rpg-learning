@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import {
   MONSTER_ARCHETYPES,
   MONSTER_DAMAGE_SCALE,
@@ -117,4 +118,14 @@ assert.equal(perfect.perfect, true);
 const defeated = masteryPreview({ outcome: "defeat", archetype: dragon, questionCount: 4, correctCount: 2, maxCombo: 1, fastCorrectCount: 1 });
 assert.equal(defeated.stars, 0);
 
-console.log("battle_rules_contract=PASS");
+const challengeSource = fs.readFileSync("src/pages/ChallengeV2.jsx", "utf8");
+assert.ok(challengeSource.includes("const [battleIdentity, setBattleIdentity] = useState(() => createBattleIdentity())"));
+assert.ok(challengeSource.includes("sessionKey: battleIdentity.sessionKey"));
+assert.ok(challengeSource.includes("monsterTier: battleIdentity.tier.key"));
+assert.ok(challengeSource.includes("monsterArchetype: battleIdentity.archetype.key"));
+assert.ok(challengeSource.includes("learningApi.completeBattle(battleIdentity.sessionKey)"));
+assert.ok(challengeSource.includes("setBattleIdentity(nextBattleIdentity)"));
+assert.ok(!challengeSource.includes("const sessionKey = useRef("));
+assert.ok(!challengeSource.includes("const [monsterTier, setMonsterTier]"));
+
+console.log("battle_rules_contract=PASS battle_identity=canonical");
