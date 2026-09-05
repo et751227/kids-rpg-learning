@@ -27,6 +27,13 @@ const newId = () => {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 };
 
+const createBattleIdentity = () => {
+  const sessionKey = `battle-v2-${newId()}`;
+  const tier = randomMonsterTier();
+  const archetype = monsterArchetypeForSession(sessionKey, tier.key);
+  return { sessionKey, tier, archetype };
+};
+
 const monsterVisualClasses = {
   normal: { card: "border-slate-500 bg-slate-900/80", icon: "text-5xl md:text-6xl", hp: "bg-red-500" },
   elite: { card: "border-amber-300 bg-amber-950/40 shadow-lg shadow-amber-500/30", icon: "text-6xl md:text-7xl", hp: "bg-amber-500" },
@@ -43,7 +50,7 @@ function ChallengeContent() {
   const [loading, setLoading] = useState(true);
   const [answerLocked, setAnswerLocked] = useState(false);
   const [playerHp, setPlayerHp] = useState(1);
-  const [monsterTier, setMonsterTier] = useState(() => randomMonsterTier());
+  const [battleIdentity, setBattleIdentity] = useState(() => createBattleIdentity());
   const [monsterHp, setMonsterHp] = useState(1);
   const [rounds, setRounds] = useState(0);
   const [combo, setCombo] = useState(0);
@@ -56,15 +63,15 @@ function ChallengeContent() {
   const [settlementSaving, setSettlementSaving] = useState(false);
   const [settlementError, setSettlementError] = useState(false);
   const questionStartedAt = useRef(Date.now());
-  const sessionKey = useRef(`battle-v2-${newId()}`);
   const attemptId = useRef(null);
   const battleLockArmed = useRef(false);
 
+  const monsterTier = battleIdentity.tier;
+  const archetype = battleIdentity.archetype;
   const maxPlayerHp = playerMaxHp(level, stats.vitality);
   const maxMonsterHp = monsterMaxHp(level, monsterTier);
   const thresholds = timingThresholds(stats.agility);
   const monsterVisual = monsterVisualClasses[monsterTier.key] || monsterVisualClasses.normal;
-  const archetype = monsterArchetypeForSession(sessionKey.current, monsterTier.key);
   const battleEnded = playerHp <= 0 || monsterHp <= 0;
   const activeBattle = !loading && Boolean(question) && !battleEnded && !battleResult;
 
@@ -92,7 +99,7 @@ function ChallengeContent() {
     setSettlementSaving(true);
     setSettlementError(false);
     try {
-      const result = await learningApi.completeBattle(sessionKey.current);
+      const result = await learningApi.completeBattle(battleIdentity.sessionKey);
       const battle = result?.battle;
       if (!battle?.exp || !battle?.level) throw new Error("invalid_battle_result");
       setBattleResult(battle);
@@ -180,11 +187,11 @@ function ChallengeContent() {
       const result = await learningApi.submitAttempt({
         attemptId: currentAttemptId,
         vocabularyId: question.vocabularyId,
-        sessionKey: sessionKey.current,
+        sessionKey: battleIdentity.sessionKey,
         mode: "challenge",
         submittedAnswer: input.join(""),
         responseTimeMs,
-        metadata: { battleRule: "v4", monsterTier: monsterTier.key, monsterArchetype: archetype.key },
+        metadata: { battleRule: "v4", monsterTier: battleIdentity.tier.key, monsterArchetype: battleIdentity.archetype.key },
       });
       const attempt = result.attempt || {};
       const correct = Boolean(attempt.correct);
@@ -220,7 +227,7 @@ function ChallengeContent() {
         return;
       }
 
-      const evaded = didEvade(sessionKey.current, currentAttemptId, stats.agility, correct);
+      const evaded = didEvade(battleIdentity.sessionKey, currentAttemptId, stats.agility, correct);
       const received = receivedMonsterDamage(level, stats.vitality, monsterTier, correct, evaded, archetype, nextMonsterHp / maxMonsterHp);
       const nextPlayerHp = Math.max(0, playerHp - received);
       setPlayerHp(nextPlayerHp);
@@ -253,12 +260,11 @@ function ChallengeContent() {
   };
 
   const restart = async () => {
-    const nextTier = randomMonsterTier();
-    sessionKey.current = `battle-v2-${newId()}`;
+    const nextBattleIdentity = createBattleIdentity();
     attemptId.current = null;
-    setMonsterTier(nextTier);
+    setBattleIdentity(nextBattleIdentity);
     setPlayerHp(playerMaxHp(level, stats.vitality));
-    setMonsterHp(monsterMaxHp(level, nextTier));
+    setMonsterHp(monsterMaxHp(level, nextBattleIdentity.tier));
     setRounds(0);
     setCombo(0);
     setMaxCombo(0);
@@ -266,8 +272,7 @@ function ChallengeContent() {
     setFastCorrectCount(0);
     setBattleResult(null);
     setSettlementError(false);
-    const nextArchetype = monsterArchetypeForSession(sessionKey.current, nextTier.key);
-    setFeedback(`${nextArchetype.icon} 遭遇${nextArchetype.label}！${nextArchetype.trait}`);
+    setFeedback(`${nextBattleIdentity.archetype.icon} 遭遇${nextBattleIdentity.archetype.label}！${nextBattleIdentity.archetype.trait}`);
     setAnswerLocked(true);
     try { await loadQuestion(); }
     catch (_) { setFeedback("題目載入失敗，請稍後再試"); setAnswerLocked(false); }
