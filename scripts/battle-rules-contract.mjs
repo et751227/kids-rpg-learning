@@ -4,6 +4,7 @@ import {
   MONSTER_ARCHETYPES,
   MONSTER_DAMAGE_SCALE,
   MONSTER_TIERS,
+  SHIELD_CHARGES,
   attackResult,
   baseAttack,
   comboMultiplier,
@@ -17,6 +18,7 @@ import {
   monsterMaxHp,
   monsterTierForRoll,
   receivedMonsterDamage,
+  shieldChargesRemaining,
   timingThresholds,
 } from "../src/game/battleRulesV2.js";
 
@@ -28,6 +30,7 @@ assert.equal(monsterTierForRoll(0.97).key, "boss");
 assert.equal(monsterTierForRoll(0.999999).key, "boss");
 
 assert.equal(MONSTER_DAMAGE_SCALE, 3);
+assert.equal(SHIELD_CHARGES, 2);
 assert.equal(MONSTER_TIERS.normal.hpMultiplier, 1);
 assert.equal(MONSTER_TIERS.elite.hpMultiplier, 1.7);
 assert.equal(MONSTER_TIERS.boss.hpMultiplier, 2.5);
@@ -92,21 +95,50 @@ assert.equal(monsterArchetypeForSession(sessionKey, "boss").key, "dragon");
 
 const wolf = MONSTER_ARCHETYPES.wolf;
 const wolfFirst = attackResult({ level, strength: 4, agility: 4, responseTimeMs: 3000, correct: true, streak: 1, archetype: wolf, correctHitIndex: 1 });
-const wolfCombo = attackResult({ level, strength: 4, agility: 4, responseTimeMs: 3000, correct: true, streak: 3, archetype: wolf, correctHitIndex: 3 });
-assert.ok(wolfCombo.damage > wolfFirst.damage);
+const wolfSecond = attackResult({ level, strength: 4, agility: 4, responseTimeMs: 3000, correct: true, streak: 2, archetype: wolf, correctHitIndex: 2 });
+assert.ok(wolfSecond.damage > wolfFirst.damage);
+assert.equal(wolfFirst.archetypeMultiplier, 0.8);
+assert.equal(wolfSecond.archetypeMultiplier, 1.15);
+
+const ghost = MONSTER_ARCHETYPES.ghost;
+const ghostNormal = attackResult({ level, strength: 4, agility: 4, responseTimeMs: timingThresholds(4).normalMs, correct: true, streak: 1, archetype: ghost, correctHitIndex: 1 });
+const ghostSlow = attackResult({ level, strength: 4, agility: 4, responseTimeMs: timingThresholds(4).normalMs + 1, correct: true, streak: 1, archetype: ghost, correctHitIndex: 1 });
+assert.equal(ghostNormal.archetypeMultiplier, 1);
+assert.equal(ghostSlow.archetypeMultiplier, 0.65);
 
 const golem = MONSTER_ARCHETYPES.golem;
-const golemShield = attackResult({ level, strength: 4, agility: 4, responseTimeMs: 3000, correct: true, streak: 2, archetype: golem, correctHitIndex: 1 });
-const golemOpen = attackResult({ level, strength: 4, agility: 4, responseTimeMs: 3000, correct: true, streak: 2, archetype: golem, correctHitIndex: 3 });
-assert.ok(golemOpen.damage > golemShield.damage);
+assert.equal(shieldChargesRemaining(golem, 0), 2);
+assert.equal(shieldChargesRemaining(golem, 1), 1);
+assert.equal(shieldChargesRemaining(golem, 2), 0);
+assert.equal(shieldChargesRemaining(golem, 20), 0);
+const golemHit1 = attackResult({ level, strength: 4, agility: 4, responseTimeMs: 3000, correct: true, streak: 1, archetype: golem, correctHitIndex: 1 });
+const golemHit2 = attackResult({ level, strength: 4, agility: 4, responseTimeMs: 3000, correct: true, streak: 1, archetype: golem, correctHitIndex: 2 });
+const golemHit3 = attackResult({ level, strength: 4, agility: 4, responseTimeMs: 3000, correct: true, streak: 1, archetype: golem, correctHitIndex: 3 });
+const golemHit4 = attackResult({ level, strength: 4, agility: 4, responseTimeMs: 3000, correct: true, streak: 1, archetype: golem, correctHitIndex: 4 });
+assert.equal(golemHit1.archetypeMultiplier, 0.55);
+assert.equal(golemHit2.archetypeMultiplier, 0.55);
+assert.equal(golemHit3.archetypeMultiplier, 1);
+assert.equal(golemHit4.archetypeMultiplier, 1);
+assert.equal(golemHit1.shieldRemaining, 1);
+assert.equal(golemHit2.shieldRemaining, 0);
+assert.equal(golemHit3.shieldApplied, false);
+assert.equal(golemHit4.shieldApplied, false);
 
 const serpent = MONSTER_ARCHETYPES.serpent;
-assert.ok(
-  receivedMonsterDamage(level, 1, MONSTER_TIERS.elite, false, false, serpent, 1) >
-  receivedMonsterDamage(level, 1, MONSTER_TIERS.elite, false, false, golem, 1),
-);
+const serpentDamage = receivedMonsterDamage(level, 1, MONSTER_TIERS.elite, false, false, serpent, 1);
+const golemDamage = receivedMonsterDamage(level, 1, MONSTER_TIERS.elite, false, false, golem, 1);
+assert.ok(serpentDamage > golemDamage);
+assert.equal(receivedMonsterDamage(level, 1, MONSTER_TIERS.elite, false, true, serpent, 1), 0);
 
 const dragon = MONSTER_ARCHETYPES.dragon;
+assert.equal(shieldChargesRemaining(dragon, 0), 2);
+assert.equal(shieldChargesRemaining(dragon, 2), 0);
+const dragonHit1 = attackResult({ level, strength: 4, agility: 4, responseTimeMs: 3000, correct: true, streak: 1, archetype: dragon, correctHitIndex: 1 });
+const dragonHit2 = attackResult({ level, strength: 4, agility: 4, responseTimeMs: 3000, correct: true, streak: 1, archetype: dragon, correctHitIndex: 2 });
+const dragonHit3 = attackResult({ level, strength: 4, agility: 4, responseTimeMs: 3000, correct: true, streak: 1, archetype: dragon, correctHitIndex: 3 });
+assert.equal(dragonHit1.archetypeMultiplier, 0.7);
+assert.equal(dragonHit2.archetypeMultiplier, 0.7);
+assert.equal(dragonHit3.archetypeMultiplier, 1);
 assert.ok(
   receivedMonsterDamage(level, 1, MONSTER_TIERS.boss, false, false, dragon, 0.3) >
   receivedMonsterDamage(level, 1, MONSTER_TIERS.boss, false, false, dragon, 0.7),
@@ -128,4 +160,4 @@ assert.ok(challengeSource.includes("setBattleIdentity(nextBattleIdentity)"));
 assert.ok(!challengeSource.includes("const sessionKey = useRef("));
 assert.ok(!challengeSource.includes("const [monsterTier, setMonsterTier]"));
 
-console.log("battle_rules_contract=PASS battle_identity=canonical");
+console.log("battle_rules_contract=PASS battle_identity=canonical monster_traits=lifecycle_locked");

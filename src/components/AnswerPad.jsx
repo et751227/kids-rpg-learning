@@ -6,7 +6,6 @@ export default function AnswerPad({
   disabled = false,
   onLetter,
   onBackspace,
-  onClear,
   onSubmit,
 }) {
   const submitDisabled = disabled || input.length === 0 || input.length !== answerLength;
@@ -43,28 +42,20 @@ export default function AnswerPad({
         </div>
       </div>
 
-      <div className="grid grid-rows-3 gap-3">
+      <div className="grid grid-rows-2 gap-3">
         <button
           type="button"
           onClick={stop(onBackspace)}
           disabled={disabled || input.length === 0}
-          className="rounded-xl bg-slate-500 text-white text-lg font-bold min-h-[64px] disabled:opacity-40 touch-manipulation"
+          className="rounded-xl bg-slate-500 text-white text-lg font-bold min-h-[72px] disabled:opacity-40 touch-manipulation"
         >
           ⬅ 退格
         </button>
         <button
           type="button"
-          onClick={stop(onClear)}
-          disabled={disabled || input.length === 0}
-          className="rounded-xl bg-slate-500 text-white text-lg font-bold min-h-[64px] disabled:opacity-40 touch-manipulation"
-        >
-          🔄 清除
-        </button>
-        <button
-          type="button"
           onClick={stop(onSubmit)}
           disabled={submitDisabled}
-          className="rounded-xl bg-green-600 text-white text-xl font-extrabold min-h-[72px] disabled:opacity-40 touch-manipulation"
+          className="rounded-xl bg-green-600 text-white text-xl font-extrabold min-h-[84px] disabled:opacity-40 touch-manipulation"
         >
           ✅ 確認
         </button>

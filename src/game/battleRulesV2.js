@@ -1,6 +1,7 @@
 export const BASE_STATS = { strength: 1, vitality: 1, agility: 1 };
 
 export const MONSTER_DAMAGE_SCALE = 3;
+export const SHIELD_CHARGES = 2;
 
 export const MONSTER_TIERS = {
   normal: { key: "normal", label: "一般怪", icon: "👾", hpMultiplier: 1, attackMultiplier: 1 },
@@ -9,11 +10,11 @@ export const MONSTER_TIERS = {
 };
 
 export const MONSTER_ARCHETYPES = {
-  wolf: { key: "wolf", tiers: ["normal"], label: "連擊狼", icon: "🐺", trait: "連擊越長，攻擊越有利；第一擊較弱。", mastery: "維持連擊來證明你掌握節奏" },
-  ghost: { key: "ghost", tiers: ["normal"], label: "回聲幽靈", icon: "👻", trait: "慢速回答會被削弱，專注與速度更重要。", mastery: "至少一半答對題要達成快速攻擊" },
-  golem: { key: "golem", tiers: ["elite"], label: "鐵壁巨像", icon: "🗿", trait: "前兩次正確攻擊會被護盾減傷。", mastery: "最多只能失誤一次" },
-  serpent: { key: "serpent", tiers: ["elite"], label: "毒牙巨蛇", icon: "🐍", trait: "答錯時承受的傷害更高。", mastery: "正確率至少 90%" },
-  dragon: { key: "dragon", tiers: ["boss"], label: "王者巨龍", icon: "🐉", trait: "前兩擊有護盾，低血量後進入狂暴。", mastery: "正確率 90% 並維持連擊" },
+  wolf: { key: "wolf", tiers: ["normal"], label: "連擊狼", icon: "🐺", trait: "第一個答對攻擊較弱；從第 2 個答對攻擊起，連擊會讓攻擊更有利。", mastery: "維持連擊來證明你掌握節奏" },
+  ghost: { key: "ghost", tiers: ["normal"], label: "回聲幽靈", icon: "👻", trait: "只有慢速答對攻擊會被削弱；快速與普通速度不受幽靈特性影響。", mastery: "至少一半答對題要達成快速攻擊" },
+  golem: { key: "golem", tiers: ["elite"], label: "鐵壁巨像", icon: "🗿", trait: "有 2 層護盾；每次答對命中消耗 1 層，兩層破完後不再減傷。", mastery: "最多只能失誤一次" },
+  serpent: { key: "serpent", tiers: ["elite"], label: "毒牙巨蛇", icon: "🐍", trait: "只有答錯且沒有閃避時，受到的怪物傷害增加 35%。", mastery: "正確率至少 90%" },
+  dragon: { key: "dragon", tiers: ["boss"], label: "王者巨龍", icon: "🐉", trait: "有 2 層護盾；每次答對命中消耗 1 層。護盾破完後不再減傷；血量 35% 以下進入狂暴。", mastery: "正確率 90% 並維持連擊" },
 };
 
 const ARCHETYPES_BY_TIER = {
@@ -106,6 +107,11 @@ export function didEvade(sessionKey, attemptId, agility, correct) {
   return deterministicEvadeRoll(sessionKey, attemptId) < evadeChance(agility);
 }
 
+export function shieldChargesRemaining(archetype, correctHits = 0) {
+  if (!archetype || !["golem", "dragon"].includes(archetype.key)) return 0;
+  return Math.max(0, SHIELD_CHARGES - Math.max(0, Math.trunc(Number(correctHits) || 0)));
+}
+
 export function receivedMonsterDamage(level, vitality, tier = MONSTER_TIERS.normal, correct = false, evaded = false, archetype = null, monsterHpRatio = 1) {
   if (correct || evaded) return 0;
   let multiplier = 1;
@@ -123,7 +129,7 @@ export function timingThresholds(agility) {
 }
 
 export function attackResult({ level, strength, agility, responseTimeMs, correct, streak = 1, archetype = null, correctHitIndex = 1 }) {
-  if (!correct) return { damage: 0, grade: "miss", multiplier: 0, comboMultiplier: 1, archetypeMultiplier: 1 };
+  if (!correct) return { damage: 0, grade: "miss", multiplier: 0, comboMultiplier: 1, archetypeMultiplier: 1, shieldApplied: false, shieldRemaining: shieldChargesRemaining(archetype, Math.max(0, correctHitIndex - 1)) };
   const { fastMs, normalMs } = timingThresholds(agility);
   let grade = "slow";
   let multiplier = 0.8;
@@ -131,16 +137,19 @@ export function attackResult({ level, strength, agility, responseTimeMs, correct
   else if (responseTimeMs <= normalMs) { grade = "normal"; multiplier = 1; }
   const combo = comboMultiplier(streak);
   let archetypeMultiplier = 1;
+  let shieldApplied = false;
   if (archetype?.key === "wolf") archetypeMultiplier = streak >= 2 ? 1.15 : 0.8;
   if (archetype?.key === "ghost" && responseTimeMs > normalMs) archetypeMultiplier = 0.65;
-  if (archetype?.key === "golem" && correctHitIndex <= 2) archetypeMultiplier = 0.55;
-  if (archetype?.key === "dragon" && correctHitIndex <= 2) archetypeMultiplier = 0.7;
+  if (archetype?.key === "golem" && correctHitIndex <= SHIELD_CHARGES) { archetypeMultiplier = 0.55; shieldApplied = true; }
+  if (archetype?.key === "dragon" && correctHitIndex <= SHIELD_CHARGES) { archetypeMultiplier = 0.7; shieldApplied = true; }
   return {
     damage: Math.max(1, Math.round(baseAttack(level, strength) * multiplier * combo * archetypeMultiplier)),
     grade,
     multiplier,
     comboMultiplier: combo,
     archetypeMultiplier,
+    shieldApplied,
+    shieldRemaining: shieldChargesRemaining(archetype, correctHitIndex),
   };
 }
 
