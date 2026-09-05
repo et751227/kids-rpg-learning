@@ -16,10 +16,19 @@ const checks = [
   [presentation.includes('return CATEGORY_PRESENTATION[key]?.belonging || SAFE_FALLBACK_PRESENTATION.belonging'), "every word needs a belonging fallback"],
   [presentation.includes("if (!category) return collection;"), "existing non-taxonomy cute collections must be preserved"],
   [!presentation.includes("RAW_COLLECTION_CATEGORIES"), "raw collection safety must not use an incomplete whitelist"],
+  [page.includes('const [view, setView] = useState("collections")'), "Codex must default to Collections before dictionary browsing"],
+  [page.includes('const [filter, setFilter] = useState("unlocked")'), "dictionary must default to discovered words"],
+  [page.includes('title: "交通旅行"'), "collection navigation must expose a child-facing transport shelf"],
+  [page.includes('"city-traveler-v1": "transport"'), "city/vehicle collection must route to transport shelf"],
+  [page.includes('transport: "transport"'), "canonical transport category packs must route to transport shelf"],
+  [page.includes("想找哪一區的收藏？"), "collection browsing must start with a shelf finder instead of one long list"],
+  [page.includes('[["unlocked", "✨ 已發現"],') || page.includes('["unlocked", "✨ 已發現"]'), "dictionary must retain discovered navigation"],
+  [page.includes('["locked", "🔒 未發現"]'), "dictionary must retain undiscovered navigation"],
+  [!page.includes('["all", "全部"]'), "dictionary first-level navigation should not restore the long all-items browse path"],
 ];
 
 for (const [ok, message] of checks) {
   if (!ok) throw new Error(message);
 }
 
-console.log("codex_collection_presentation_contract=PASS raw_taxonomy_whitelist=none fallback=world_theme");
+console.log("codex_collection_presentation_contract=PASS findability=shelves collections_first=true dictionary=discovered_undiscovered");
