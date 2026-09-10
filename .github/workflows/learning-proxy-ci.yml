@@ -6,7 +6,9 @@ on:
       - "api/learning/**"
       - "server/learning-proxy.cjs"
       - "src/**"
+      - "scripts/**"
       - "package.json"
+      - "package-lock.json"
       - ".github/workflows/learning-proxy-ci.yml"
   workflow_dispatch:
 
@@ -17,25 +19,64 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
-      - uses: actions/setup-node@v7
+      - name: Resolve affected checks
+        id: scope
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          ui=false
+          proxy=false
+          control=false
+
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            ui=true
+            proxy=true
+          else
+            changed="$RUNNER_TEMP/kids-ci.changed"
+            git diff --name-only "$BASE_SHA" "$HEAD_SHA" > "$changed"
+            if grep -Eq '^(src/|scripts/|package(-lock)?\.json$)' "$changed"; then ui=true; fi
+            if grep -Eq '^(api/learning/|server/learning-proxy\.cjs$|package(-lock)?\.json$)' "$changed"; then proxy=true; fi
+            if grep -Fqx '.github/workflows/learning-proxy-ci.yml' "$changed"; then control=true; fi
+          fi
+
+          echo "ui=$ui" >> "$GITHUB_OUTPUT"
+          echo "proxy=$proxy" >> "$GITHUB_OUTPUT"
+          echo "control=$control" >> "$GITHUB_OUTPUT"
+          printf 'affected checks: ui=%s proxy=%s control=%s\n' "$ui" "$proxy" "$control"
+          [[ "$ui" == true || "$proxy" == true || "$control" == true ]]
+
+      - name: Setup Node.js
+        if: steps.scope.outputs.ui == 'true' || steps.scope.outputs.proxy == 'true'
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           package-manager-cache: false
 
       - name: Install dependencies
+        if: steps.scope.outputs.ui == 'true'
         run: npm install --ignore-scripts
 
-      - name: Build web app
+      - name: Build and run UI contracts
+        if: steps.scope.outputs.ui == 'true'
         run: npm run build
 
       - name: Check server-side proxy syntax
+        if: steps.scope.outputs.proxy == 'true'
         run: |
           node --check server/learning-proxy.cjs
           for file in api/learning/*.js; do node --check "$file"; done
 
       - name: Enforce server-side identity and secret boundary
+        if: steps.scope.outputs.proxy == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -44,3 +85,12 @@ jobs:
           grep -q 'KIDS_LEARNING_INGRESS_TOKEN' server/learning-proxy.cjs
           grep -q 'KIDS_FAMILY_ACCESS_KEY' server/learning-proxy.cjs
           grep -q 'KIDS_SESSION_SECRET' server/learning-proxy.cjs
+
+      - name: Selection evidence
+        if: always()
+        shell: bash
+        run: |
+          printf 'ui=%s\nproxy=%s\ncontrol=%s\n' \
+            '${{ steps.scope.outputs.ui }}' \
+            '${{ steps.scope.outputs.proxy }}' \
+            '${{ steps.scope.outputs.control }}'
